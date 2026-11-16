@@ -6,6 +6,6 @@
 
 const CONFIG = {
   // Adresse de base, sans /rest/v1 à la fin (sinon erreur PGRST125)
-  SUPABASE_URL: "https://REMPLACER.supabase.co",
-  SUPABASE_CLE_PUBLIQUE: "REMPLACER",
+  SUPABASE_URL: "https://njdymnqtcgqqbugbdcsk.supabase.co",
+  SUPABASE_CLE_PUBLIQUE: "sb_publishable_-m08yrg8nktLen3sOzVVcQ_gAiasHdt",
 };
