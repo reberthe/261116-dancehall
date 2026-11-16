@@ -33,6 +33,22 @@ Tout le reste est dans les scripts `sql/`.
 
 Tous les scripts sont rejouables sans erreur.
 
+## 📁 Fichiers de l'appli
+
+- `index.html`, `style.css`
+- `config.js` : adresse du projet et clé publique (jamais de clé secrète)
+- `app.js` : connexion, chargement des données, onglets, fiches, photos (liens signés)
+- `steps.js` : onglet Steps
+- `createurs.js` : onglet Carte (liste des créateurs en attendant la carte), fiches crew et personne, membres, photos de profil
+
+Après chaque modification, le numéro `?v=` change dans `index.html` pour que les téléphones prennent la nouvelle version.
+
+## 📷 Photos de profil
+
+- Dossier fermé `photos` : `createurs/<identifiant>.jpg`, JPEG de 400 × 400, réduit sur le téléphone avant l'envoi.
+- Affichées par des liens signés valables 1 h.
+- Remplacer une photo écrase l'ancienne. Seule Emma peut supprimer une photo.
+
 ## 🧪 Pages de test (étape 1)
 
 - `test/carte.html` : carte, bulles, appui long, recherche Nominatim

@@ -74,7 +74,7 @@ function dessinerSteps(contenu) {
     liste.replaceChildren();
     if (!steps.length) liste.append(el("div", { class: "vide", text: "Aucun step ne correspond." }));
     for (const s of steps) {
-      const p =App.estEditrice() ? App.donnees.perso.get(s.id) : null;
+      const p = App.estEditrice() ? App.donnees.perso.get(s.id) : null;
       liste.append(el("button", { type: "button", class: "ligne", onclick: () => ouvrirFicheStep(s.id) },
         lettre(s.etiquette),
         el("span", { class: "ligne-texte" }, el("span", { class: "ligne-titre", text: s.nom }), el("span", { class: "ligne-sous", text: sousTitreStep(s) })),
@@ -97,7 +97,7 @@ App.enregistrerOnglet("steps", { titre: "Steps", icone: ICONES.steps, dessiner: 
 
 // ---------- Fiche d'un step ----------
 function ouvrirFicheStep(id) {
-  App.ouvrirFeuille((c) => remplirFicheStep(c, id));
+  App.ouvrirFeuille((c) => remplirFicheStep(c, id), true);
 }
 
 function remplirFicheStep(c, id) {
@@ -108,7 +108,7 @@ function remplirFicheStep(c, id) {
 
   c.append(el("div", { class: "feuille-haut" },
     App.boutonRetour("Steps"),
-    App.estEditrice() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireStep(s.id, () => remplirFicheStep(c, id)) }, "Modifier") : null));
+    App.estEditrice() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireStep(s.id) }, "Modifier") : null));
 
   c.append(el("h1", { text: s.nom }));
   if (s.autres_noms) c.append(el("p", { class: "sous-titre", text: "aussi appelé : " + s.autres_noms }));
@@ -121,14 +121,14 @@ function remplirFicheStep(c, id) {
   if (s.a_verifier) puces.append(el("span", { class: "puce", text: "À vérifier" }));
   c.append(puces);
 
-  c.append(el("button", { type: "button", class: "carte-createur",
-    onclick: () => message("La fiche des créateurs arrive à l'étape 3b.") },
-    createur ? lettre(createur.etiquette, { carre: createur.type === "personne" }) : lettre(null),
+  c.append(el("button", { type: "button", class: "carte-createur", disabled: !createur,
+    onclick: () => createur && ouvrirFicheCreateur(createur.id, s.nom) },
+    createur ? avatar(createur) : lettre(null),
     el("span", { class: "ligne-texte" },
       el("span", { class: "petit", text: "Créé par" }),
       el("span", { class: "ligne-titre", text: createur ? createur.nom : "Inconnu" }),
       createur ? el("span", { class: "petit", text: createur.type === "crew" ? "Crew" : "Personne" }) : null),
-    icone(ICONES.chevron, 18, 2.4)));
+    createur ? icone(ICONES.chevron, 18, 2.4) : null));
 
   if (s.decomposition || s.chanson) {
     c.append(el("div", { class: "bloc" },
@@ -214,7 +214,7 @@ async function sauverPerso(stepId, champs) {
 }
 
 // ---------- Formulaire (nouveau step ou modification) ----------
-function ouvrirFormulaireStep(id, apresEnregistrement) {
+function ouvrirFormulaireStep(id) {
   const s = id ? App.donnees.steps.find((x) => x.id === id) : null;
   if (id && !s) { message("Ce step n'existe plus.", true); return; }
   const dateOuverture = s ? s.modifie_le : null;
@@ -336,9 +336,8 @@ function ouvrirFormulaireStep(id, apresEnregistrement) {
         await App.chargerTout();
         App.fermerFeuille();
         message("Step enregistré");
-        if (apresEnregistrement) apresEnregistrement();
-        else ouvrirFicheStep(nouvelId);
-        if (App.ongletActif === "steps" && App.feuilles.length <= 1) App.redessiner();
+        App.rafraichir();
+        if (!s) ouvrirFicheStep(nouvelId);
       } catch (err) {
         zoneErreur.textContent = erreurLisible(err);
         enregistrer.disabled = false;
@@ -365,12 +364,13 @@ function boutonSupprimerStep(s) {
 }
 
 // ---------- Nouveau créateur (formulaire rapide) ----------
-function ouvrirCreateurRapide(quandCree) {
+// typeImpose : "personne" pour ajouter un membre à un crew
+function ouvrirCreateurRapide(quandCree, typeImpose) {
   App.ouvrirFeuille((c) => {
     const f = el("form", { class: "formulaire", novalidate: true });
     const zoneErreur = el("p", { class: "erreur", role: "alert" });
     const nom = el("input", { type: "text", maxlength: "80", required: true });
-    let type = "personne";
+    let type = typeImpose || "personne";
     let etiquette = null;
     const segType = el("div", { class: "segments", role: "group", "aria-label": "Crew ou personne" });
     const segEtiquette = el("div", { class: "segments", role: "group", "aria-label": "Man, gyal ou mixte" });
@@ -387,9 +387,9 @@ function ouvrirCreateurRapide(quandCree) {
     const creer = el("button", { type: "submit", class: "bouton-principal" }, "Créer");
     c.append(el("div", { class: "feuille-haut" }, App.boutonRetour("Annuler")), el("h1", { text: "Nouveau créateur" }), f);
     f.append(el("label", {}, "Nom *", nom),
-      el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Crew ou personne" }), segType),
+      typeImpose ? null : el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Crew ou personne" }), segType),
       el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Man, gyal (ou mixte pour un crew)" }), segEtiquette),
-      el("p", { class: "petit", text: "Le lieu, l'histoire, les membres et la photo se remplissent ensuite dans la fiche du créateur." }),
+      el("p", { class: "petit", text: "Le lieu, l'histoire, les membres et la photo se remplissent ensuite dans la fiche du créateur (« Modifier »)." }),
       zoneErreur, el("div", { class: "ligne-boutons" }, creer));
     f.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -406,6 +406,7 @@ function ouvrirCreateurRapide(quandCree) {
       App.fermerFeuille();
       message("Créateur ajouté");
       quandCree(data.id);
+      App.rafraichir();
     });
   });
 }

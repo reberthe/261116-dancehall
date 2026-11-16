@@ -4,18 +4,26 @@
 const App = {
   client: null,
   profil: null,                 // { role, prenom } de la personne connectée
-  donnees: {
-    steps: [],
-    createurs: [],
-    perso: new Map(),           // step_id → ligne de perso_steps (partie privée)
-    modifs: new Map(),          // "table:id" → { prenom, modifie_le } (Emma et Jade seulement)
-  },
+  email: "",                    // e-mail du compte connecté (affiché dans le profil)
+  donnees: donneesVides(),
+  photos: new Map(),            // "chemin|modifie_le" → { url, expire } (liens signés, valables 1 h)
   onglets: {},
   ordreOnglets: [],
   ongletActif: "steps",
   feuilles: [],
   derniereLecture: 0,
 };
+
+function donneesVides() {
+  return {
+    steps: [],
+    createurs: [],
+    lieux: [],
+    membres: [],                // lignes de membres_crew
+    perso: new Map(),           // step_id → ligne de perso_steps (partie privée)
+    modifs: new Map(),          // "table:id" → { prenom, modifie_le } (Emma et Jade seulement)
+  };
+}
 
 // ---------- Libellés ----------
 const ETIQUETTES = {
@@ -77,6 +85,7 @@ const ICONES = {
   steps: "M9 18V5l11-2v13M6 15a3 3 0 1 0 0 6a3 3 0 1 0 0-6M17 13a3 3 0 1 0 0 6a3 3 0 1 0 0-6",
   carte: "M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21zM12 7a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5",
   cours: "M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2M3 10h18M8 3v4M16 3v4",
+  photo: "M4 8h3l2-3h6l2 3h3v11H4zM12 9.8a3.2 3.2 0 1 0 0 6.4a3.2 3.2 0 1 0 0-6.4",
   savoir: "M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5",
 };
 
@@ -148,18 +157,33 @@ function erreurLisible(erreur) {
 App.estEditrice = () => !!App.profil && (App.profil.role === "admin" || App.profil.role === "editrice");
 App.estAdmin = () => !!App.profil && App.profil.role === "admin";
 App.createur = (id) => App.donnees.createurs.find((c) => c.id === id) || null;
+App.lieu = (id) => App.donnees.lieux.find((l) => l.id === id) || null;
+// « Trench Town, Kingston » pour un quartier, « Kingston » pour une ville
+App.nomLieu = function (id) {
+  const l = App.lieu(id);
+  if (!l) return "";
+  const ville = l.ville_id ? App.lieu(l.ville_id) : null;
+  return ville ? l.nom + ", " + ville.nom : l.nom;
+};
 App.modif = (table, id) => App.donnees.modifs.get(table + ":" + id) || null;
 
 // ---------- Feuilles plein écran ----------
-App.ouvrirFeuille = function (construire) {
+// Si `redessinable` est vrai, la feuille est redessinée après chaque enregistrement (fiches, pas formulaires)
+App.ouvrirFeuille = function (construire, redessinable = false) {
   const feuille = el("div", { class: "feuille", role: "dialog", "aria-modal": "true" });
   const contenu = el("div", { class: "feuille-contenu" });
   feuille.append(contenu);
   document.getElementById("feuilles").append(feuille);
   App.feuilles.push(feuille);
   document.body.style.overflow = "hidden";
+  if (redessinable) feuille.redessiner = () => construire(contenu);
   construire(contenu);
   return feuille;
+};
+// Après un enregistrement : redessine l'onglet et les fiches ouvertes (les formulaires restent tels quels)
+App.rafraichir = function () {
+  for (const f of App.feuilles) if (f.redessiner) f.redessiner();
+  App.redessiner();
 };
 App.fermerFeuille = function () {
   const f = App.feuilles.pop();
@@ -190,12 +214,16 @@ async function toutLire(table, colonnes, tri) {
 }
 
 App.chargerTout = async function () {
-  const [steps, createurs] = await Promise.all([
+  const [steps, createurs, lieux, membres] = await Promise.all([
     toutLire("steps", "*", "id"),
-    toutLire("createurs", "id, type, nom, etiquette, lieu_id, modifie_le", "id"),
+    toutLire("createurs", "*", "id"),
+    toutLire("lieux", "id, type, nom, ville_id", "id"),
+    toutLire("membres_crew", "crew_id, personne_id, fondateur, ancien"),
   ]);
   App.donnees.steps = steps;
   App.donnees.createurs = createurs;
+  App.donnees.lieux = lieux;
+  App.donnees.membres = membres;
   if (App.estEditrice()) {
     const [perso, modifs] = await Promise.all([
       toutLire("perso_steps", "step_id, niveau, a_travailler, notes"),
@@ -205,6 +233,38 @@ App.chargerTout = async function () {
     App.donnees.modifs = new Map(modifs.map((m) => [m.table_nom + ":" + m.fiche_id, m]));
   }
   App.derniereLecture = Date.now();
+  await App.chargerPhotos();
+};
+
+// ---------- Photos (dossier fermé : liens signés) ----------
+// Une photo est retrouvée par son chemin ET la date de modification de la fiche :
+// une photo remplacée change la date, donc un nouveau lien, et le téléphone ne ressort pas l'ancienne.
+const DUREE_LIEN = 3600;   // secondes
+App.chargerPhotos = async function () {
+  const gardes = new Map();
+  const aSigner = new Map();   // chemin → clé
+  for (const c of App.donnees.createurs) {
+    if (!c.photo_chemin) continue;
+    const cle = c.photo_chemin + "|" + c.modifie_le;
+    const connu = App.photos.get(cle);
+    if (connu && connu.expire - Date.now() > 10 * 60 * 1000) gardes.set(cle, connu);   // encore valable 10 min au moins
+    else aSigner.set(c.photo_chemin, cle);
+  }
+  if (aSigner.size) {
+    try {
+      const { data, error } = await App.client.storage.from("photos").createSignedUrls([...aSigner.keys()], DUREE_LIEN);
+      if (error) throw error;
+      for (const d of data) {
+        if (d.signedUrl && aSigner.has(d.path)) gardes.set(aSigner.get(d.path), { url: d.signedUrl, expire: Date.now() + DUREE_LIEN * 1000 });
+      }
+    } catch (e) { /* pas de réseau : les silhouettes s'affichent */ }
+  }
+  App.photos = gardes;
+};
+App.urlPhoto = function (c) {
+  if (!c || !c.photo_chemin) return null;
+  const p = App.photos.get(c.photo_chemin + "|" + c.modifie_le);
+  return p ? p.url : null;
 };
 
 // ---------- Écriture avec le contrôle « modifiée entre-temps » ----------
@@ -261,7 +321,9 @@ App.menuProfil = function () {
     c.append(
       el("div", { class: "feuille-haut" }, App.boutonRetour("Retour")),
       el("h1", { text: App.profil.prenom }),
-      el("div", { class: "bloc" }, el("h2", { text: "Mes droits" }), el("p", { text: roles[App.profil.role] || App.profil.role })),
+      el("div", { class: "bloc" },
+        el("h2", { text: "Compte connecté" }), el("p", { text: App.email || "?" }),
+        el("h2", { text: "Mes droits" }), el("p", { text: roles[App.profil.role] || App.profil.role })),
       el("button", { type: "button", class: "bouton-danger", onclick: App.deconnecter }, "Se déconnecter de ce téléphone"),
     );
   });
@@ -272,8 +334,7 @@ function ongletBientot(texte) {
   return (contenu) => contenu.append(App.entete(texte.titre), el("div", { class: "bientot", text: texte.message }));
 }
 App.enregistrerOnglet("steps", { titre: "Steps", icone: ICONES.steps, dessiner: () => {} });   // remplacé par steps.js
-App.enregistrerOnglet("carte", { titre: "Carte", icone: ICONES.carte,
-  dessiner: ongletBientot({ titre: "Carte", message: "La carte arrive à l'étape 3c." }) });
+App.enregistrerOnglet("carte", { titre: "Carte", icone: ICONES.carte, dessiner: () => {} });   // remplacé par createurs.js
 App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.estEditrice(),
   dessiner: ongletBientot({ titre: "Cours", message: "Tes cours arrivent à l'étape 3d." }) });
 App.enregistrerOnglet("savoir", { titre: "Savoir", icone: ICONES.savoir,
@@ -289,6 +350,8 @@ App.entrer = async function () {
   if (error) { message(erreurLisible(error), true); montrer("ecran-connexion"); return; }
   App.profil = data && data[0] ? data[0] : null;
   if (!App.profil) { montrer("ecran-sans-acces"); return; }
+  const { data: s } = await App.client.auth.getSession();
+  App.email = s && s.session && s.session.user ? s.session.user.email || "" : "";
   try {
     await App.chargerTout();
   } catch (e) {
@@ -305,7 +368,9 @@ App.deconnecter = async function () {
   App.fermerToutesLesFeuilles();
   await App.client.auth.signOut({ scope: "local" });   // ce téléphone seulement
   App.profil = null;
-  App.donnees = { steps: [], createurs: [], perso: new Map(), modifs: new Map() };
+  App.email = "";
+  App.donnees = donneesVides();
+  App.photos = new Map();
   montrer("ecran-connexion");
 };
 
@@ -341,6 +406,7 @@ App.demarrer = async function () {
     if (document.visibilityState !== "visible" || !App.profil) return;
     if (Date.now() - App.derniereLecture < 60 * 1000) return;
     try { await App.chargerTout(); if (!App.feuilles.length) App.redessiner(); } catch (e) { /* hors connexion : on garde ce qu'on a */ }
+    // (si une fiche est ouverte, on ne la redessine pas sous les doigts : elle le sera au prochain enregistrement)
   });
 
   const { data } = await App.client.auth.getSession();
