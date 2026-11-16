@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Test photo · Dancehall</title>
+<style>
+  body { margin: 0; padding: calc(env(safe-area-inset-top) + 20px) 20px 40px; font-family: -apple-system, system-ui, sans-serif;
+         background: #F4F0E6; color: #1E1E1C; }
+  h1 { font-size: 24px; margin: 0 0 6px; }
+  p { margin: 0 0 16px; color: #5F5A50; line-height: 1.4; }
+  label.bouton { display: inline-flex; align-items: center; height: 48px; padding: 0 20px; border-radius: 24px;
+                 background: #E2B84A; font-weight: 700; font-size: 16px; }
+  input[type=file] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  .carte { background: #FFFFFF; border-radius: 16px; padding: 16px; margin-top: 16px; line-height: 1.6; font-size: 15px; }
+  .apercu { display: flex; gap: 16px; align-items: center; margin-top: 12px; }
+  .rond { width: 120px; height: 120px; border-radius: 60px; border: 3px solid #2F7A4D; object-fit: cover; background: #E4DDCD; }
+  .ko { color: #B42318; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>Test photo de profil</h1>
+<p>Choisis une photo dans la pellicule, puis refais le test en prenant une photo. Rien n'est envoyé sur internet.</p>
+
+<label class="bouton" for="choix">Choisir une photo</label>
+<input id="choix" type="file" accept="image/*">
+
+<div class="carte" id="infos-origine">Pas encore de photo.</div>
+<div class="carte" id="infos-reduite" hidden>
+  <div id="texte-reduite"></div>
+  <div class="apercu"><img id="apercu" class="rond" alt="Aperçu de la photo réduite"></div>
+</div>
+
+<script>
+const COTE = 400;        // photo carrée de 400 × 400 px
+const QUALITE = 0.82;    // qualité JPEG
+
+const zoneOrigine = document.getElementById("infos-origine");
+const zoneReduite = document.getElementById("infos-reduite");
+
+function ko(o) { return Math.round(o / 1024) + " Ko"; }
+
+// Ouvre l'image : createImageBitmap si possible, sinon une balise <img>
+async function ouvrirImage(fichier) {
+  if (window.createImageBitmap) {
+    try { return await createImageBitmap(fichier); } catch (e) { /* on essaie autrement */ }
+  }
+  const url = URL.createObjectURL(fichier);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return img;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+document.getElementById("choix").addEventListener("change", async (e) => {
+  const fichier = e.target.files[0];
+  if (!fichier) return;
+  zoneReduite.hidden = true;
+  zoneOrigine.textContent = "Format reçu : " + (fichier.type || "inconnu") + " · nom : " + fichier.name + " · poids : " + ko(fichier.size);
+
+  const debut = performance.now();
+  let image;
+  try {
+    image = await ouvrirImage(fichier);
+  } catch (erreur) {
+    zoneOrigine.textContent += " — ❌ impossible d'ouvrir l'image (" + erreur.message + ")";
+    zoneOrigine.classList.add("ko");
+    return;
+  }
+  const largeur = image.width, hauteur = image.height;
+
+  // Recadrage carré au centre, puis réduction à 400 × 400
+  const cote = Math.min(largeur, hauteur);
+  const canvas = document.createElement("canvas");
+  canvas.width = COTE; canvas.height = COTE;
+  canvas.getContext("2d").drawImage(image, (largeur - cote) / 2, (hauteur - cote) / 2, cote, cote, 0, 0, COTE, COTE);
+  if (image.close) image.close();
+
+  const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", QUALITE));
+  const duree = Math.round(performance.now() - debut);
+  if (!blob) {
+    zoneOrigine.textContent += " — ❌ la réduction a échoué";
+    return;
+  }
+  document.getElementById("texte-reduite").textContent =
+    "Taille d'origine : " + largeur + " × " + hauteur + " px\n" +
+    "Après réduction : " + COTE + " × " + COTE + " px, JPEG, " + ko(blob.size) + " (" + duree + " ms)";
+  document.getElementById("texte-reduite").style.whiteSpace = "pre-line";
+  const apercu = document.getElementById("apercu");
+  if (apercu.src) URL.revokeObjectURL(apercu.src);
+  apercu.src = URL.createObjectURL(blob);
+  zoneReduite.hidden = false;
+  e.target.value = "";   // permet de rechoisir la même photo
+});
+</script>
+</body>
+</html>

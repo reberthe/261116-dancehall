@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Test connexion · Dancehall</title>
+<style>
+  body { margin: 0; padding: 24px 20px; font-family: -apple-system, system-ui, sans-serif; background: #F4F0E6; color: #1E1E1C; }
+  h1 { font-size: 24px; margin: 0 0 16px; }
+  .carte { background: #FFFFFF; border-radius: 16px; padding: 16px; margin-bottom: 12px; line-height: 1.5; word-break: break-word; }
+  .ok { color: #2F7A4D; font-weight: 700; }
+  .ko { color: #B42318; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>Test connexion Supabase</h1>
+<div class="carte" id="resultat">Test en cours…</div>
+<div class="carte" id="infos"></div>
+
+<script src="../config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"
+        integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O"
+        crossorigin="anonymous"></script>
+<script>
+  const zoneResultat = document.getElementById("resultat");
+  const zoneInfos = document.getElementById("infos");
+
+  // Affiche un texte sans jamais l'interpréter comme du HTML
+  function afficher(zone, texte, classe) {
+    zone.textContent = texte;
+    zone.className = "carte " + (classe || "");
+  }
+
+  async function tester() {
+    zoneInfos.textContent = "Adresse : " + CONFIG.SUPABASE_URL;
+
+    if (CONFIG.SUPABASE_URL.includes("REMPLACER") || CONFIG.SUPABASE_CLE_PUBLIQUE.includes("REMPLACER")) {
+      afficher(zoneResultat, "❌ config.js n'est pas encore rempli.", "ko");
+      return;
+    }
+    if (CONFIG.SUPABASE_URL.includes("/rest/v1")) {
+      afficher(zoneResultat, "❌ Enlève /rest/v1 à la fin de SUPABASE_URL dans config.js.", "ko");
+      return;
+    }
+
+    const client = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_CLE_PUBLIQUE);
+    const { data, error } = await client.from("test_connexion").select("message, cree_le");
+
+    if (error) {
+      afficher(zoneResultat, "❌ Erreur : " + (error.code || "") + " " + error.message, "ko");
+    } else if (!data || data.length === 0) {
+      afficher(zoneResultat, "⚠️ Connexion OK mais aucune ligne : relance 00_test_connexion.sql.", "ko");
+    } else {
+      afficher(zoneResultat, "✅ Connexion OK : « " + data[0].message + " »", "ok");
+    }
+  }
+
+  tester();
+</script>
+</body>
+</html>

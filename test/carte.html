@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Test carte · Dancehall</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H"
+      crossorigin="anonymous">
+<style>
+  html, body { margin: 0; height: 100%; font-family: -apple-system, system-ui, sans-serif; color: #1E1E1C; }
+  #carte { position: fixed; inset: 0; background: #AAD3DF; }
+
+  /* Barre du haut : recherche */
+  #haut { position: fixed; z-index: 1000; left: 12px; right: 12px; top: calc(env(safe-area-inset-top) + 10px);
+          display: flex; flex-direction: column; gap: 8px; }
+  #recherche { display: flex; gap: 8px; }
+  #recherche input { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border: none; border-radius: 22px;
+                     font-size: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+  #recherche button { height: 44px; padding: 0 16px; border: none; border-radius: 22px; background: #E2B84A;
+                      font-weight: 700; font-size: 15px; color: #1E1E1C; }
+  #recherche button:disabled { opacity: 0.5; }
+  #resultats { background: #FFFFFF; border-radius: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.12); overflow: hidden; }
+  #resultats button { display: block; width: 100%; text-align: left; padding: 10px 14px; border: none;
+                      border-bottom: 1px solid #EEE8DA; background: #FFFFFF; font-size: 14px; color: #1E1E1C; }
+  #fil { align-self: flex-start; display: flex; gap: 8px; align-items: center; }
+  #fil button, #fil span { height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: #FFFFFF;
+                           font-size: 13px; font-weight: 600; color: #1E1E1C; display: flex; align-items: center;
+                           box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+
+  /* Bulles */
+  .bulle-ancre { background: transparent; border: none; }
+  .bulle { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; height: 32px;
+           padding: 0 4px 0 12px; border: none; border-radius: 16px; background: #FFFFFF; color: #1E1E1C;
+           display: flex; align-items: center; gap: 8px; font: 700 13px -apple-system, system-ui, sans-serif;
+           box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .bulle .nombre { min-width: 24px; height: 24px; padding: 0 6px; box-sizing: border-box; border-radius: 12px;
+                   background: #E2B84A; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+  .bulle.groupe { background: #1E1E1C; color: #FFFFFF; }
+  .bulle.groupe .nombre { color: #1E1E1C; }
+
+  /* Liste du quartier, en bas */
+  #liste { position: fixed; z-index: 1000; left: 0; right: 0; bottom: 0; background: #F4F0E6;
+           border-radius: 22px 22px 0 0; padding: 14px 20px calc(env(safe-area-inset-bottom) + 16px);
+           box-shadow: 0 -4px 16px rgba(0,0,0,0.15); display: none; }
+  #liste h2 { margin: 0 0 8px; font-size: 20px; }
+  #liste ul { margin: 0; padding: 0 0 0 18px; line-height: 1.7; }
+  #liste button { margin-top: 10px; height: 40px; padding: 0 16px; border: none; border-radius: 20px; background: #FFFFFF; font-weight: 600; }
+
+  /* Journal de test */
+  #journal { position: fixed; z-index: 999; left: 12px; bottom: calc(env(safe-area-inset-bottom) + 24px); max-width: 70%;
+             background: rgba(30,30,28,0.85); color: #FFFFFF; font: 12px/1.4 ui-monospace, Menlo, monospace;
+             padding: 8px 10px; border-radius: 10px; white-space: pre-wrap; pointer-events: none; }
+</style>
+</head>
+<body>
+<div id="carte"></div>
+
+<div id="haut">
+  <form id="recherche">
+    <input id="champ" type="search" placeholder="Chercher une ville (ex. Mandeville)" aria-label="Chercher une ville" autocomplete="off">
+    <button id="bouton-chercher" type="submit">Chercher</button>
+  </form>
+  <div id="resultats" hidden></div>
+  <div id="fil"></div>
+</div>
+
+<div id="liste" role="dialog" aria-label="Créateurs du lieu">
+  <h2 id="liste-titre"></h2>
+  <ul id="liste-noms"></ul>
+  <button id="liste-fermer" type="button">Fermer</button>
+</div>
+
+<div id="journal"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
+        crossorigin="anonymous"></script>
+<script>
+// ---------- Données de test (écrites en dur, pas de base de données) ----------
+// Positions : Natural Earth (villes), Wikipédia et sites de coordonnées (quartiers). Approximatives.
+// Seul le Black Roses Crew est réel ; les « Exemple » sont inventés.
+const VILLES = [
+  { nom: "Kingston", lat: 17.997, lon: -76.794, sansQuartier: [], quartiers: [
+    { nom: "Trench Town",    lat: 17.985,  lon: -76.7967, createurs: ["Black Roses Crew"] },
+    { nom: "Tivoli Gardens", lat: 17.9742, lon: -76.8014, createurs: ["Exemple A", "Exemple B"] },
+    { nom: "Waterhouse",     lat: 18.018,  lon: -76.837,  createurs: ["Exemple C"] },
+    { nom: "New Kingston",   lat: 18.0075, lon: -76.7832, createurs: ["Exemple D"] },
+    { nom: "August Town",    lat: 17.9935, lon: -76.739,  createurs: ["Exemple E"] },
+  ]},
+  { nom: "Portmore",     lat: 17.95,  lon: -76.88,  sansQuartier: ["Exemple F"], quartiers: [] },
+  { nom: "Spanish Town", lat: 17.983, lon: -76.95,  sansQuartier: ["Exemple G", "Exemple H"], quartiers: [] },
+  { nom: "Montego Bay",  lat: 18.467, lon: -77.917, sansQuartier: ["Exemple I", "Exemple J"], quartiers: [] },
+  { nom: "Ocho Rios",    lat: 18.408, lon: -77.103, sansQuartier: ["Exemple K"], quartiers: [] },
+];
+
+const ZOOM_QUARTIERS = 12;      // à partir de ce zoom, on montre les quartiers
+const ZOOM_VILLE = 13;          // zoom quand on touche une ville
+const DELAI_NOMINATIM = 1500;   // ms entre deux recherches (règle Nominatim : 1 par seconde au plus)
+const JAMAIQUE = [[17.70, -78.37], [18.53, -76.18]];
+
+// ---------- Journal de test ----------
+const lignesJournal = [];
+function noter(texte) {
+  lignesJournal.unshift(texte);
+  lignesJournal.length = Math.min(lignesJournal.length, 6);
+  document.getElementById("journal").textContent = lignesJournal.join("\n");
+}
+
+// ---------- Carte ----------
+// Sur iPhone, l'appui long est simulé par Leaflet (« tapHold »). Leaflet ne l'active que si le
+// navigateur se dit « Safari » : l'appli installée ne le dit pas, donc on le force sur iPhone/iPad.
+const estIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const carte = L.map("carte", { zoomControl: false, tapHold: estIOS });
+L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19,
+  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+}).addTo(carte);
+carte.fitBounds(JAMAIQUE);
+
+const coucheBulles = L.layerGroup().addTo(carte);
+
+function totalVille(ville) {
+  return ville.sansQuartier.length + ville.quartiers.reduce((n, q) => n + q.createurs.length, 0);
+}
+
+// Fabrique une bulle « Nom  [n] » (texte inséré avec textContent : jamais de HTML)
+function creerBulle(nom, nombre, groupe, quandOnTouche) {
+  const bouton = document.createElement("button");
+  bouton.type = "button";
+  bouton.className = "bulle" + (groupe ? " groupe" : "");
+  const etiquette = document.createElement("span");
+  etiquette.textContent = nom;
+  const pastille = document.createElement("span");
+  pastille.className = "nombre";
+  pastille.textContent = String(nombre);
+  bouton.append(etiquette, pastille);
+  bouton.setAttribute("aria-label", nom + ", " + nombre + " créateur" + (nombre > 1 ? "s" : ""));
+  L.DomEvent.on(bouton, "click", (e) => { L.DomEvent.stop(e); quandOnTouche(); });
+  return bouton;
+}
+
+function poserBulle(lat, lon, element) {
+  const icone = L.divIcon({ className: "bulle-ancre", html: element, iconSize: [0, 0], iconAnchor: [0, 0] });
+  L.marker([lat, lon], { icon: icone, keyboard: false }).addTo(coucheBulles);
+}
+
+// Largeur estimée d'une bulle en pixels (pour savoir si deux bulles se touchent)
+function largeurBulle(nom) { return 12 + nom.length * 7.6 + 8 + 28; }
+
+// Regroupe les bulles qui se chevauchent : la plus grande garde son nom et prend le total
+function regrouper(elements) {
+  const tries = [...elements].sort((a, b) => b.nombre - a.nombre);
+  const gardes = [];
+  for (const el of tries) {
+    const p = carte.latLngToContainerPoint([el.lat, el.lon]);
+    const l = largeurBulle(el.nom);
+    const boite = { x1: p.x - l / 2, x2: p.x + l / 2, y1: p.y - 18, y2: p.y + 18 };
+    const voisin = gardes.find((g) => boite.x1 < g.boite.x2 && boite.x2 > g.boite.x1 && boite.y1 < g.boite.y2 && boite.y2 > g.boite.y1);
+    if (voisin) {
+      voisin.nombre += el.nombre;
+      voisin.membres.push(el);
+    } else {
+      gardes.push({ ...el, boite, membres: [el] });
+    }
+  }
+  return gardes;
+}
+
+function dessiner() {
+  coucheBulles.clearLayers();
+  const zoom = carte.getZoom();
+  const fil = document.getElementById("fil");
+  fil.replaceChildren();
+
+  if (zoom < ZOOM_QUARTIERS) {
+    // Niveau 1 : les villes
+    const elements = VILLES.map((v) => ({ nom: v.nom, lat: v.lat, lon: v.lon, nombre: totalVille(v) })).filter((e) => e.nombre > 0);
+    const bulles = regrouper(elements);
+    for (const b of bulles) {
+      const groupe = b.membres.length > 1;
+      const nom = groupe ? b.nom + " +" + (b.membres.length - 1) : b.nom;
+      poserBulle(b.lat, b.lon, creerBulle(nom, b.nombre, groupe, () => {
+        if (groupe) {
+          noter("Groupe touché : " + b.membres.map((m) => m.nom).join(", "));
+          carte.flyToBounds(L.latLngBounds(b.membres.map((m) => [m.lat, m.lon])), { padding: [80, 80], maxZoom: ZOOM_QUARTIERS - 1 });
+        } else {
+          noter("Ville touchée : " + b.nom);
+          carte.flyTo([b.lat, b.lon], ZOOM_VILLE);
+        }
+      }));
+    }
+    const etiquette = document.createElement("span");
+    etiquette.textContent = "Jamaïque · " + VILLES.reduce((n, v) => n + totalVille(v), 0) + " créateurs";
+    fil.append(etiquette);
+    noter("Zoom " + zoom + " · villes · " + bulles.length + " bulle(s)");
+  } else {
+    // Niveau 2 : les quartiers (et « sans quartier » au centre de la ville)
+    const elements = [];
+    for (const v of VILLES) {
+      for (const q of v.quartiers) elements.push({ nom: q.nom, ville: v.nom, lat: q.lat, lon: q.lon, nombre: q.createurs.length, createurs: q.createurs });
+      if (v.sansQuartier.length) elements.push({ nom: v.nom + " (sans quartier)", ville: v.nom, lat: v.lat, lon: v.lon, nombre: v.sansQuartier.length, createurs: v.sansQuartier });
+    }
+    for (const e of elements) {
+      poserBulle(e.lat, e.lon, creerBulle(e.nom, e.nombre, false, () => {
+        noter("Quartier touché : " + e.nom);
+        ouvrirListe(e.nom + " · " + e.ville, e.createurs);
+      }));
+    }
+    const retour = document.createElement("button");
+    retour.type = "button";
+    retour.textContent = "‹ Jamaïque";
+    retour.addEventListener("click", () => { fermerListe(); carte.flyToBounds(JAMAIQUE); });
+    fil.append(retour);
+    noter("Zoom " + zoom + " · quartiers · " + elements.length + " bulle(s)");
+  }
+}
+
+carte.on("zoomend", dessiner);
+dessiner();
+
+// ---------- Liste du quartier ----------
+function ouvrirListe(titre, createurs) {
+  document.getElementById("liste-titre").textContent = titre;
+  const ul = document.getElementById("liste-noms");
+  ul.replaceChildren(...createurs.map((nom) => { const li = document.createElement("li"); li.textContent = nom; return li; }));
+  document.getElementById("liste").style.display = "block";
+}
+function fermerListe() { document.getElementById("liste").style.display = "none"; }
+document.getElementById("liste-fermer").addEventListener("click", fermerListe);
+
+// ---------- Appui long ----------
+let repereAppui = null;
+carte.on("contextmenu", (e) => {
+  const texte = "Appui long : " + e.latlng.lat.toFixed(5) + ", " + e.latlng.lng.toFixed(5);
+  noter(texte);
+  if (repereAppui) repereAppui.remove();
+  repereAppui = L.circleMarker(e.latlng, { radius: 8, color: "#1E1E1C", weight: 2, fillColor: "#2F7A4D", fillOpacity: 0.9 }).addTo(carte);
+});
+
+// ---------- Recherche Nominatim ----------
+let derniereRecherche = 0;
+const zoneResultats = document.getElementById("resultats");
+let repereRecherche = null;
+
+document.getElementById("recherche").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const texte = document.getElementById("champ").value.trim();
+  if (texte.length < 2) return;
+  const maintenant = Date.now();
+  if (maintenant - derniereRecherche < DELAI_NOMINATIM) { noter("Recherche trop rapprochée : attends 1 s"); return; }
+  derniereRecherche = maintenant;
+
+  const bouton = document.getElementById("bouton-chercher");
+  bouton.disabled = true;
+  setTimeout(() => { bouton.disabled = false; }, DELAI_NOMINATIM);
+
+  const adresse = "https://nominatim.openstreetmap.org/search?format=jsonv2&countrycodes=jm&limit=5&accept-language=fr&q=" + encodeURIComponent(texte);
+  const debut = performance.now();
+  try {
+    const reponse = await fetch(adresse);
+    const duree = Math.round(performance.now() - debut);
+    if (!reponse.ok) { noter("Nominatim : HTTP " + reponse.status + " (" + duree + " ms)"); return; }
+    const resultats = await reponse.json();
+    noter("Nominatim : HTTP 200, " + resultats.length + " résultat(s), " + duree + " ms");
+    zoneResultats.replaceChildren();
+    for (const r of resultats) {
+      const ligne = document.createElement("button");
+      ligne.type = "button";
+      ligne.textContent = r.display_name;
+      ligne.addEventListener("click", () => {
+        zoneResultats.hidden = true;
+        const pos = [Number(r.lat), Number(r.lon)];
+        if (repereRecherche) repereRecherche.remove();
+        repereRecherche = L.circleMarker(pos, { radius: 8, color: "#1E1E1C", weight: 2, fillColor: "#E2B84A", fillOpacity: 0.9 }).addTo(carte);
+        carte.flyTo(pos, ZOOM_VILLE);
+        noter("Lieu choisi : " + Number(r.lat).toFixed(4) + ", " + Number(r.lon).toFixed(4));
+      });
+      zoneResultats.append(ligne);
+    }
+    const credit = document.createElement("button");
+    credit.type = "button";
+    credit.textContent = resultats.length ? "Recherche : © OpenStreetMap (Nominatim)" : "Aucun résultat";
+    credit.disabled = true;
+    zoneResultats.append(credit);
+    zoneResultats.hidden = false;
+  } catch (erreur) {
+    noter("Nominatim : échec réseau (" + erreur.message + ")");
+  }
+});
+
+noter("iOS détecté : " + (estIOS ? "oui" : "non") + " · appli installée : " + (navigator.standalone ? "oui" : "non"));
+</script>
+</body>
+</html>
