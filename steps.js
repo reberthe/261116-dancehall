@@ -14,7 +14,7 @@ function sauverFiltres() {
 }
 
 // Steps qui passent la recherche et les filtres
-// Sous-catégories choisies dont l'étiquette est aussi choisie (ex. Waistline seulement si Gyal est choisi)
+// Sous-catégories choisies dont l'étiquette est aussi choisie (ex. Waistline seulement si Female est choisi)
 function sousCategoriesActives() {
   return filtresSteps.sousCategories.filter((cle) => {
     const sc = App.sousCategorie(cle);
@@ -65,7 +65,7 @@ function dessinerSteps(contenu) {
   champ.addEventListener("input", () => { filtresSteps.recherche = champ.value; dessinerListe(); });
   contenu.append(el("label", { class: "champ-recherche" }, icone(ICONES.loupe, 18), champ));
 
-  // Filtres : « À travailler » (Emma et Jade), puis une ligne pour les époques, une ligne pour man / gyal / neutre
+  // Filtres : « À travailler » (Emma et Jade), puis une ligne pour les époques, une ligne pour female / male / neutre
   const filtres = el("div", { class: "filtres-lignes", role: "group", "aria-label": "Filtres" });
   const pilule = (texte, actif, basculer) => el("button", { type: "button", class: "filtre", "aria-pressed": actif ? "true" : "false",
     onclick: () => { basculer(); sauverFiltres(); App.redessiner(); } }, texte);
@@ -77,9 +77,9 @@ function dessinerSteps(contenu) {
   filtres.append(el("div", { class: "filtres rang" }, ["gyal", "man", "neutre"].map((cle) =>
     pilule(ETIQUETTES[cle].nom, filtresSteps.etiquettes.includes(cle), () => {
       basculerDans(filtresSteps.etiquettes, cle);
-      filtresSteps.sousCategories = sousCategoriesActives();   // décocher Gyal enlève aussi Waistline
+      filtresSteps.sousCategories = sousCategoriesActives();   // décocher Female enlève aussi Waistline
     }))));
-  // Sous-catégories : seulement sous une étiquette choisie (ex. « Waistline technique » quand Gyal est choisi)
+  // Sous-catégories : seulement sous une étiquette choisie (ex. « Waistline technique » quand Female est choisi)
   const sousCats = App.donnees.sousCategories.filter((sc) => filtresSteps.etiquettes.includes(sc.etiquette));
   if (sousCats.length) filtres.append(el("div", { class: "filtres sous-filtres" }, sousCats.map((sc) =>
     pilule(sc.nom, filtresSteps.sousCategories.includes(sc.cle), () => basculerDans(filtresSteps.sousCategories, sc.cle)))));
@@ -139,7 +139,7 @@ function remplirFicheStep(c, id) {
 
   const puces = el("div", { class: "puces" });
   puces.append(s.etiquette ? el("span", { class: "puce " + s.etiquette, text: ETIQUETTES[s.etiquette].lettre + " · " + ETIQUETTES[s.etiquette].nom })
-    : el("span", { class: "puce", text: "Man / gyal / neutre : ?" }));
+    : el("span", { class: "puce", text: "Female / male / neutre : ?" }));
   const sousCat = App.sousCategorie(s.sous_categorie);
   if (sousCat) puces.append(el("span", { class: "puce sous-categorie", text: sousCat.nom }));
   puces.append(el("span", { class: "puce", text: s.epoque ? EPOQUES[s.epoque] : "Époque : ?" }));
@@ -277,10 +277,10 @@ function ouvrirFormulaireStep(id) {
 
     let etiquette = s ? s.etiquette : null;
     let sousCategorie = s ? s.sous_categorie || null : null;
-    const segEtiquette = el("div", { class: "segments quatre", role: "group", "aria-label": "Man, gyal ou neutre" });
+    const segEtiquette = el("div", { class: "segments quatre", role: "group", "aria-label": "Female, male ou neutre" });
     const zoneSousCat = el("div", { class: "formulaire" });
     function dessinerEtiquette() {
-      segEtiquette.replaceChildren(...[["man", "Man"], ["gyal", "Gyal"], ["neutre", "Neutre"], [null, "?"]].map(([cle, n]) =>
+      segEtiquette.replaceChildren(...[["gyal", "Female"], ["man", "Male"], ["neutre", "Neutre"], [null, "?"]].map(([cle, n]) =>
         el("button", { type: "button", "aria-pressed": etiquette === cle ? "true" : "false", onclick: () => { etiquette = cle; dessinerEtiquette(); } }, n)));
       // Sous-catégories de l'étiquette choisie (une au plus ; retoucher l'enlève)
       const choix = App.donnees.sousCategories.filter((sc) => sc.etiquette === etiquette);
@@ -314,7 +314,7 @@ function ouvrirFormulaireStep(id) {
       el("label", {}, "Autres noms ou orthographes", autres),
       el("label", {}, "Créé par", choixCreateur), el("div", { class: "ligne-boutons" }, nouveauCreateur),
       el("label", {}, "Époque", choixEpoque),
-      el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Man, gyal ou neutre" }), segEtiquette),
+      el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Female, male ou neutre" }), segEtiquette),
       zoneSousCat,
       el("label", {}, "Année (facultatif)", annee),
       el("label", {}, "Décomposition", decomposition),
@@ -420,12 +420,12 @@ function ouvrirCreateurRapide(quandCree, typeImpose) {
     let type = typeImpose || "personne";
     let etiquette = null;
     const segType = el("div", { class: "segments", role: "group", "aria-label": "Crew ou personne" });
-    const segEtiquette = el("div", { class: "segments", role: "group", "aria-label": "Man, gyal ou mixte" });
+    const segEtiquette = el("div", { class: "segments", role: "group", "aria-label": "Female, male ou mixte" });
     function dessiner() {
       segType.style.gridTemplateColumns = "repeat(2, minmax(0, 1fr))";
       segType.replaceChildren(...[["personne", "Personne"], ["crew", "Crew"]].map(([cle, n]) =>
         el("button", { type: "button", "aria-pressed": type === cle ? "true" : "false", onclick: () => { type = cle; if (type === "personne" && etiquette === "mixte") etiquette = null; dessiner(); } }, n)));
-      const choix = type === "crew" ? [["man", "Man"], ["gyal", "Gyal"], ["mixte", "Mixte"]] : [["man", "Man"], ["gyal", "Gyal"]];
+      const choix = type === "crew" ? [["gyal", "Female"], ["man", "Male"], ["mixte", "Mixte"]] : [["gyal", "Female"], ["man", "Male"]];
       segEtiquette.style.gridTemplateColumns = "repeat(" + choix.length + ", minmax(0, 1fr))";
       segEtiquette.replaceChildren(...choix.map(([cle, n]) =>
         el("button", { type: "button", "aria-pressed": etiquette === cle ? "true" : "false", onclick: () => { etiquette = etiquette === cle ? null : cle; dessiner(); } }, n)));
@@ -435,7 +435,7 @@ function ouvrirCreateurRapide(quandCree, typeImpose) {
     c.append(el("div", { class: "feuille-haut" }, App.boutonRetour("Annuler")), el("h1", { text: "Nouveau créateur" }), f);
     f.append(el("label", {}, "Nom *", nom),
       typeImpose ? null : el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Crew ou personne" }), segType),
-      el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Man, gyal (ou mixte pour un crew)" }), segEtiquette),
+      el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Female, male (ou mixte pour un crew)" }), segEtiquette),
       el("p", { class: "petit", text: "Le lieu, l'histoire, les membres et la photo se remplissent ensuite dans la fiche du créateur (« Modifier »)." }),
       zoneErreur, el("div", { class: "ligne-boutons" }, creer));
     f.addEventListener("submit", async (e) => {

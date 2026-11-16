@@ -31,7 +31,16 @@ Tout le reste est dans les scripts `sql/`.
 5. `sql/04_test_securite.sql` : toutes les lignes doivent être `ok = true`
 6. `sql/05_depart.sql` : données de départ (lieux, créateurs, steps, avec leurs sources)
 7. `sql/06_cours_steps_gardes.sql` : un step supprimé reste dans les cours où il a été vu (son nom est gardé). Doit afficher « ok : un step supprimé reste dans le cours »
-8. `sql/07_sous_categories.sql` : sous-catégories des steps (pour l'instant « Waistline technique » sous Gyal). Pour en ajouter une : une ligne de plus dans ce script, puis le relancer. Doit afficher « ok : Waistline technique (gyal) »
+8. `sql/07_sous_categories.sql` : sous-catégories des steps (pour l'instant « Waistline technique » sous Female). Pour en ajouter une : une ligne de plus dans ce script, puis le relancer. Doit afficher « ok : Waistline technique (gyal) »
+9. `sql/08_instagram.sql` : compte Instagram des créateurs (le @ cliquable dans leur fiche). Doit afficher « ok : compte Instagram des créateurs »
+
+Dans la base, les étiquettes gardent leurs noms techniques (`man`, `gyal`) ; l'appli les affiche « Male » (M) et « Female » (F).
+
+## 🎥 Vidéos (Google Drive d'Emma)
+
+- Dossier « Riddim – vidéos » : `Steps` partagé avec les membres de l'appli (Jade en Éditeur), `Cours (privé)` visible seulement par Emma.
+- Règles de rangement dans le document « 📌 Comment ranger les vidéos » du dossier.
+- Un nouveau membre de l'appli → l'ajouter aussi au partage du dossier « Riddim – vidéos ».
 
 Tous les scripts sont rejouables sans erreur.
 

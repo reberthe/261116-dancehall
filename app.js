@@ -35,8 +35,8 @@ function donneesVides() {
 
 // ---------- Libellés ----------
 const ETIQUETTES = {
-  man: { lettre: "M", nom: "Man" },
-  gyal: { lettre: "G", nom: "Gyal" },
+  man: { lettre: "M", nom: "Male" },
+  gyal: { lettre: "F", nom: "Female" },
   neutre: { lettre: "N", nom: "Neutre" },
   mixte: { lettre: "X", nom: "Mixte" },
 };

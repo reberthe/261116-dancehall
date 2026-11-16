@@ -45,6 +45,19 @@ function roleDansCrew(m) {
 
 function pluriel(n, mot) { return n + " " + mot + (n > 1 ? "s" : ""); }
 
+// Compte Instagram : on garde seulement le nom (sans @, sans adresse) ; l'appli construit le lien elle-même
+const INSTAGRAM_VALIDE = /^[A-Za-z0-9._]{1,30}$/;
+function nomInstagram(texte) {
+  let t = (texte || "").trim();
+  const adresse = t.match(/^(?:https?:\/\/)?(?:www\.)?instagram\.com\/([^/?#]+)/i);
+  if (adresse) t = adresse[1];
+  return t.replace(/^@/, "");
+}
+function lienInstagram(nom) {
+  return el("a", { class: "lien-instagram", href: "https://www.instagram.com/" + encodeURIComponent(nom) + "/",
+    target: "_blank", rel: "noopener noreferrer", "aria-label": "Ouvrir @" + nom + " sur Instagram" }, "@" + nom);
+}
+
 function sousTitreCreateur(c) {
   if (c.type === "crew") {
     return ["Crew", App.nomLieu(c.lieu_id) || null, pluriel(membresDe(c.id).length, "membre")].filter(Boolean).join(" · ");
@@ -128,7 +141,7 @@ function createursFiltres() {
     if (filtresCreateurs.etiquettes.length && !filtresCreateurs.etiquettes.includes(c.etiquette)) return false;
     if (filtresCreateurs.epoques.length && !(c.epoques || []).some((e) => filtresCreateurs.epoques.includes(e))) return false;
     if (mots.length) {
-      const texte = sansAccents([c.nom, c.autres_noms, c.vrai_nom, App.nomLieu(c.lieu_id)].join(" "));
+      const texte = sansAccents([c.nom, c.autres_noms, c.vrai_nom, c.instagram, App.nomLieu(c.lieu_id)].join(" "));
       if (!mots.every((m) => texte.includes(m))) return false;
     }
     return true;
@@ -195,11 +208,12 @@ function remplirFicheCreateur(c, id, retour) {
     el("div", { class: "tete-texte" },
       el("h1", { text: cr.nom }),
       identite ? el("p", { class: "petit", text: identite }) : null,
+      cr.instagram && INSTAGRAM_VALIDE.test(cr.instagram) ? lienInstagram(cr.instagram) : null,
       cr.photo_chemin && cr.photo_credit ? el("p", { class: "tres-petit", text: "Photo : " + cr.photo_credit }) : null)));
 
   const puces = el("div", { class: "puces" });
   puces.append(cr.etiquette ? el("span", { class: "puce " + cr.etiquette, text: ETIQUETTES[cr.etiquette].lettre + " · " + ETIQUETTES[cr.etiquette].nom })
-    : el("span", { class: "puce", text: (estCrew ? "Man / gyal / mixte" : "Man / gyal") + " : ?" }));
+    : el("span", { class: "puce", text: (estCrew ? "Female / male / mixte" : "Female / male") + " : ?" }));
   if ((cr.epoques || []).length) for (const e of cr.epoques) puces.append(el("span", { class: "puce", text: EPOQUES[e] }));
   else puces.append(el("span", { class: "puce", text: "Époque : ?" }));
   if (cr.annee_debut) puces.append(el("span", { class: "puce", text: "depuis " + cr.annee_debut }));
@@ -292,15 +306,17 @@ function ouvrirFormulaireCreateur(id) {
     const nom = el("input", { type: "text", maxlength: "80", required: true, value: cr ? cr.nom : "" });
     const autres = el("input", { type: "text", maxlength: "200", value: cr ? cr.autres_noms || "" : "", placeholder: "Séparés par des virgules" });
     const vraiNom = el("input", { type: "text", maxlength: "100", value: cr ? cr.vrai_nom || "" : "" });
+    const instagram = el("input", { type: "text", maxlength: "80", autocapitalize: "off", autocorrect: "off", spellcheck: "false",
+      value: cr && cr.instagram ? "@" + cr.instagram : "", placeholder: "@nomducompte" });
     const champVraiNom = el("label", {}, "Vrai nom (facultatif)", vraiNom);
 
     const segType = el("div", { class: "segments deux", role: "group", "aria-label": "Crew ou personne" });
-    const segEtiquette = el("div", { class: "segments", role: "group", "aria-label": "Man, gyal ou mixte" });
+    const segEtiquette = el("div", { class: "segments", role: "group", "aria-label": "Female, male ou mixte" });
     function dessinerChoix() {
       segType.replaceChildren(...[["personne", "Personne"], ["crew", "Crew"]].map(([cle, n]) =>
         el("button", { type: "button", disabled: aDesLiens, "aria-pressed": type === cle ? "true" : "false",
           onclick: () => { type = cle; if (type === "personne" && etiquette === "mixte") etiquette = null; dessinerChoix(); } }, n)));
-      const choix = type === "crew" ? [["man", "Man"], ["gyal", "Gyal"], ["mixte", "Mixte"], [null, "?"]] : [["man", "Man"], ["gyal", "Gyal"], [null, "?"]];
+      const choix = type === "crew" ? [["gyal", "Female"], ["man", "Male"], ["mixte", "Mixte"], [null, "?"]] : [["gyal", "Female"], ["man", "Male"], [null, "?"]];
       segEtiquette.className = "segments" + (choix.length === 4 ? " quatre" : "");
       segEtiquette.replaceChildren(...choix.map(([cle, n]) =>
         el("button", { type: "button", "aria-pressed": etiquette === cle ? "true" : "false", onclick: () => { etiquette = cle; dessinerChoix(); } }, n)));
@@ -336,9 +352,10 @@ function ouvrirFormulaireCreateur(id) {
     f.append(
       el("label", {}, "Nom *", nom),
       el("div", { class: "formulaire" }, el("span", { class: "aide", text: aDesLiens ? "Crew ou personne (ne change plus : il a des membres ou des crews)" : "Crew ou personne" }), segType),
-      el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Man, gyal (ou mixte pour un crew)" }), segEtiquette),
+      el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Female, male (ou mixte pour un crew)" }), segEtiquette),
       el("label", {}, "Autres noms ou orthographes", autres),
       champVraiNom,
+      el("label", {}, "Compte Instagram", instagram, el("span", { class: "aide", text: "Le nom du compte (ou son adresse) : il devient un @ cliquable dans la fiche." })),
       el("label", {}, "Lieu (quartier ou ville)", choixLieu,
         el("span", { class: "aide", text: "Vide = « Lieu inconnu » sur la carte (sauf pour un membre d'un crew)." })),
       el("div", { class: "ligne-boutons" }, nouveauLieu),
@@ -365,6 +382,10 @@ function ouvrirFormulaireCreateur(id) {
         valeurAnnee = Number(annee.value);
         if (!Number.isInteger(valeurAnnee) || valeurAnnee < 1950 || valeurAnnee > 2100) { zoneErreur.textContent = "L'année doit être entre 1950 et 2100."; return; }
       }
+      const valeurInstagram = nomInstagram(instagram.value);
+      if (valeurInstagram && !INSTAGRAM_VALIDE.test(valeurInstagram)) {
+        zoneErreur.textContent = "Compte Instagram : seulement des lettres, des chiffres, des points et des _ (30 au plus)."; return;
+      }
       const doublon = App.donnees.createurs.find((x) => x.id !== (cr && cr.id) && x.type === type && sansAccents(x.nom) === sansAccents(valeurNom));
       if (doublon) { zoneErreur.textContent = "Un " + (type === "crew" ? "crew" : "créateur") + " s'appelle déjà « " + doublon.nom + " »."; return; }
 
@@ -374,6 +395,7 @@ function ouvrirFormulaireCreateur(id) {
         etiquette,
         autres_noms: autres.value.trim() || null,
         vrai_nom: type === "personne" ? vraiNom.value.trim() || null : null,
+        instagram: valeurInstagram || null,
         lieu_id: choixLieu.value ? Number(choixLieu.value) : null,
         epoques: Object.keys(EPOQUES).filter((cle) => epoques.includes(cle)),   // toujours dans le même ordre
         annee_debut: valeurAnnee,
