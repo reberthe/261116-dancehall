@@ -75,7 +75,7 @@ function dessinerCarteJamaique(contenu) {
   dessus.append(el("div", { class: "carte-ligne" },
     boutonsMode("carte"),
     el("div", { class: "entete-actions" },
-      App.estEditrice() ? el("button", { type: "button", class: "pastille-profil", onclick: ouvrirListeLieux }, "Lieux") : null,
+      App.peutEcrire() ? el("button", { type: "button", class: "pastille-profil", onclick: ouvrirListeLieux }, "Lieux") : null,
       el("button", { type: "button", class: "pastille-profil", onclick: App.menuProfil, "aria-label": "Profil et déconnexion" }, App.profil.prenom))));
   const filtres = el("div", { class: "filtres carte-filtres", role: "group", "aria-label": "Filtres" });
   const basculerDans = (liste, valeur) => { const i = liste.indexOf(valeur); if (i >= 0) liste.splice(i, 1); else liste.push(valeur); };
@@ -91,7 +91,7 @@ function dessinerCarteJamaique(contenu) {
     return b;
   };
   for (const [cle, nom] of Object.entries(EPOQUES)) filtres.append(pilule(nom, filtresCreateurs.epoques, cle));
-  for (const cle of ["man", "gyal", "mixte"]) filtres.append(pilule(ETIQUETTES[cle].nom, filtresCreateurs.etiquettes, cle));
+  for (const cle of ["gyal", "man", "mixte"]) filtres.append(pilule(ETIQUETTES[cle].nom, filtresCreateurs.etiquettes, cle));
   for (const [cle, nom] of Object.entries(TYPES)) filtres.append(pilule(nom, filtresCreateurs.types, cle));
   dessus.append(filtres, fil);
 
@@ -122,7 +122,7 @@ function dessinerCarteJamaique(contenu) {
 
   // Appui long (Emma et Jade) : nouveau lieu à cet endroit
   carte.on("contextmenu", (e) => {
-    if (!App.estEditrice()) return;
+    if (!App.peutEcrire()) return;
     ouvrirNouveauLieu({ position: [e.latlng.lat, e.latlng.lng] });
   });
 
@@ -232,7 +232,7 @@ function dessinerCarteJamaique(contenu) {
         el("button", { type: "button", class: "bouton-secondaire", onclick: fermerPanneau }, "Fermer")),
       el("div", { class: "liste" }, tries.map((c) => ligneCreateur(c, sousTitreCreateur(c), () => ouvrirFicheCreateur(c.id, "Carte")))),
       tries.some((c) => c.type === "crew") ? el("p", { class: "petit", text: "Les membres sans lieu à eux se trouvent dans la fiche de leur crew." }) : null,
-      lieu && App.estEditrice() ? el("div", { class: "ligne-boutons" },
+      lieu && App.peutEcrire() ? el("div", { class: "ligne-boutons" },
         el("button", { type: "button", class: "bouton-secondaire", onclick: () => ouvrirLieu(lieu.id) }, "Modifier ce lieu")) : null);
     panneau.hidden = false;
     panneau.scrollTop = 0;

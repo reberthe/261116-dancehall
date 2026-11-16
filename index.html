@@ -6,18 +6,21 @@
 <meta name="theme-color" content="#F4F0E6">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Dancehall">
-<title>Dancehall</title>
+<meta name="apple-mobile-web-app-title" content="Riddim">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<link rel="icon" type="image/png" href="icones/icone-192.png">
+<title>Riddim</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H"
       crossorigin="anonymous">
-<link rel="stylesheet" href="style.css?v=3e1">
+<link rel="stylesheet" href="style.css?v=4a1">
 </head>
 <body>
 
 <!-- Connexion -->
 <section id="ecran-connexion" hidden>
-  <h1>Dancehall</h1>
+  <h1>Riddim</h1>
   <div class="bande" aria-hidden="true"><span></span><span></span><span></span></div>
   <form id="form-connexion" novalidate>
     <label>E-mail
@@ -41,6 +44,7 @@
 <!-- Appli -->
 <div id="appli" hidden>
   <main id="contenu"></main>
+  <div id="bandeau" role="status" hidden></div>
   <nav id="barre" aria-label="Onglets"></nav>
 </div>
 
@@ -50,18 +54,18 @@
 <!-- Messages courts -->
 <div id="message" role="status" aria-live="polite"></div>
 
-<script src="config.js?v=3e1"></script>
+<script src="config.js?v=4a1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"
         integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O"
         crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH"
         crossorigin="anonymous"></script>
-<script src="app.js?v=3e1"></script>
-<script src="steps.js?v=3e1"></script>
-<script src="createurs.js?v=3e1"></script>
-<script src="carte.js?v=3e1"></script>
-<script src="cours.js?v=3e1"></script>
-<script src="savoir.js?v=3e1"></script>
+<script src="app.js?v=4a1"></script>
+<script src="steps.js?v=4a1"></script>
+<script src="createurs.js?v=4a1"></script>
+<script src="carte.js?v=4a1"></script>
+<script src="cours.js?v=4a1"></script>
+<script src="savoir.js?v=4a1"></script>
 </body>
 </html>

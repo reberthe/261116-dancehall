@@ -1,4 +1,4 @@
-# 💃 Dancehall
+# 💃 Riddim (appli dancehall)
 
 Appli pour garder tout le savoir dancehall : steps, crews et créateurs, carte, cours, lexique et histoire.
 PWA hébergée sur GitHub Pages, données dans Supabase (offre gratuite).
@@ -45,7 +45,21 @@ Tous les scripts sont rejouables sans erreur.
 - `savoir.js` : onglet Savoir (lexique en cartes, fiches d'histoire par époque avec les créateurs concernés)
 - `carte.js` : onglet Carte (bulles des villes puis des quartiers, « Lieu inconnu » au centre de la Jamaïque), lieux (création, renommage, suppression)
 
-Après chaque modification, le numéro `?v=` change dans `index.html` pour que les téléphones prennent la nouvelle version.
+- `sw.js` : service worker (l'appli s'ouvre sans réseau, bandeau « Nouvelle version »)
+- `manifest.json` et `icones/` : nom « Riddim » et icône (vinyle) de l'appli installée
+
+⚠️ À chaque nouvelle version : changer **`VERSION` dans `sw.js`** et **tous les `?v=` dans `index.html`**, avec la même valeur (ex. `4a1`).
+
+## 📱 Installer l'appli sur iPhone
+
+- Dans Safari : ouvrir l'adresse de l'appli → bouton Partager → « Sur l'écran d'accueil ».
+- Pour changer le nom ou l'icône d'une appli déjà installée : la supprimer de l'écran d'accueil, puis la réinstaller depuis Safari (il faudra se reconnecter).
+
+## 📴 Hors connexion
+
+- Tout se lit sans réseau (copie des données sur le téléphone, effacée à la déconnexion), en lecture seule.
+- Pas de photos ni de fond de carte sans réseau (règle d'OpenStreetMap).
+- Le service worker ne garde jamais les réponses de Supabase, de la carte ni de Nominatim.
 
 ## 📷 Photos de profil
 

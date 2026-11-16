@@ -98,7 +98,7 @@ function grandAvatar(c, ouvrirPhotoAuToucher = true) {
   }
   const info = ETIQUETTES[c.etiquette];
   const pastille = el("span", { class: "avatar-pastille " + classe, "aria-hidden": "true" }, info ? info.lettre : "?");
-  if (!App.estEditrice() || !ouvrirPhotoAuToucher) {
+  if (!App.peutEcrire() || !ouvrirPhotoAuToucher) {
     return el("span", { class: "avatar-grand", role: "img", "aria-label": "Photo de " + c.nom }, rond, pastille);
   }
   return el("button", { type: "button", class: "avatar-grand", "aria-label": "Photo de " + c.nom + " (changer)", onclick: () => ouvrirPhoto(c.id) },
@@ -137,7 +137,7 @@ function createursFiltres() {
 
 // Mode « Liste » de l'onglet Carte (boutonsMode : le choix Carte | Liste, fourni par carte.js)
 function dessinerListeCreateurs(contenu, boutonsMode) {
-  const actions = App.estEditrice()
+  const actions = App.peutEcrire()
     ? [el("button", { type: "button", class: "bouton-rond", "aria-label": "Ajouter un créateur", onclick: () => ouvrirFormulaireCreateur(null) }, icone(ICONES.plus, 22, 2.6))]
     : [];
   contenu.append(App.entete("Carte", ...actions));
@@ -153,7 +153,7 @@ function dessinerListeCreateurs(contenu, boutonsMode) {
   const pilule = (texte, liste, valeur) => el("button", { type: "button", class: "filtre", "aria-pressed": liste.includes(valeur) ? "true" : "false",
     onclick: () => { basculerDans(liste, valeur); sauverFiltresCreateurs(); App.redessiner(); } }, texte);
   for (const [cle, nom] of Object.entries(EPOQUES)) filtres.append(pilule(nom, filtresCreateurs.epoques, cle));
-  for (const cle of ["man", "gyal", "mixte"]) filtres.append(pilule(ETIQUETTES[cle].nom, filtresCreateurs.etiquettes, cle));
+  for (const cle of ["gyal", "man", "mixte"]) filtres.append(pilule(ETIQUETTES[cle].nom, filtresCreateurs.etiquettes, cle));
   for (const [cle, nom] of Object.entries(TYPES)) filtres.append(pilule(nom, filtresCreateurs.types, cle));
   contenu.append(filtres);
 
@@ -184,7 +184,7 @@ function remplirFicheCreateur(c, id, retour) {
 
   c.append(el("div", { class: "feuille-haut" },
     App.boutonRetour(retour),
-    App.estEditrice() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireCreateur(cr.id) }, "Modifier") : null));
+    App.peutEcrire() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireCreateur(cr.id) }, "Modifier") : null));
 
   // Photo, nom, identité
   const identite = estCrew
@@ -245,7 +245,7 @@ function remplirFicheCreateur(c, id, retour) {
     if (!membres.length) listeMembres.append(el("div", { class: "vide", text: "Pas encore de membre." }));
     for (const m of membres) listeMembres.append(ligneCreateur(m.personne, roleDansCrew(m), () => ouvrirFicheCreateur(m.personne.id, cr.nom)));
     c.append(listeMembres);
-    if (App.estEditrice()) c.append(el("div", { class: "ligne-boutons" },
+    if (App.peutEcrire()) c.append(el("div", { class: "ligne-boutons" },
       el("button", { type: "button", class: "bouton-secondaire", onclick: () => ouvrirMembres(cr.id) }, "Gérer les membres")));
 
     // Steps du crew lui-même, puis steps de ses membres
@@ -608,7 +608,7 @@ function creerCadre(image, classe) {
 
 function ouvrirPhoto(id) {
   const cr = App.createur(id);
-  if (!cr || !App.estEditrice()) return;
+  if (!cr || !App.peutEcrire()) return;
 
   App.ouvrirFeuille((c) => {
     let cadre = null;   // photo choisie, pas encore envoyée

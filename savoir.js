@@ -8,7 +8,7 @@ const filtresHistoire = Object.assign({ epoques: [] }, lireLocal("filtres_histoi
 // ---------- Onglet ----------
 function dessinerSavoir(contenu) {
   const mode = lireLocal("mode_savoir", "lexique") === "histoire" ? "histoire" : "lexique";
-  const ajouter = App.estEditrice()
+  const ajouter = App.peutEcrire()
     ? [el("button", { type: "button", class: "bouton-rond", "aria-label": mode === "lexique" ? "Ajouter un terme" : "Ajouter une fiche d'histoire",
         onclick: () => (mode === "lexique" ? ouvrirFormulaireTerme(null) : ouvrirFormulaireHistoire(null)) }, icone(ICONES.plus, 22, 2.6))]
     : [];
@@ -44,7 +44,7 @@ function dessinerLexique(contenu) {
     compte.textContent = pluriel(termes.length, "terme");
     liste.replaceChildren();
     if (!App.donnees.lexique.length) {
-      liste.append(el("div", { class: "vide", text: App.estEditrice() ? "Pas encore de terme. Touche + pour ajouter le premier." : "Pas encore de terme." }));
+      liste.append(el("div", { class: "vide", text: App.peutEcrire() ? "Pas encore de terme. Touche + pour ajouter le premier." : "Pas encore de terme." }));
       return;
     }
     if (!termes.length) liste.append(el("div", { class: "vide", text: "Aucun terme ne correspond." }));
@@ -55,12 +55,12 @@ function dessinerLexique(contenu) {
 
 // Carte complète d'un terme. Pour Emma et Jade, la toucher ouvre sa modification (sauf le lien).
 function carteTerme(t) {
-  const carte = el("div", { class: "carte-terme" + (App.estEditrice() ? " modifiable" : "") },
+  const carte = el("div", { class: "carte-terme" + (App.peutEcrire() ? " modifiable" : "") },
     el("h3", { text: t.terme }),
     el("p", { text: t.definition }),
     t.exemple ? el("p", { class: "exemple", text: "Ex. : " + t.exemple }) : null,
     t.lien && LIEN_VALIDE.test(t.lien) ? el("a", { href: t.lien, target: "_blank", rel: "noopener noreferrer" }, icone(ICONES.lien, 15, 2.2), "Écouter un exemple") : null);
-  if (App.estEditrice()) {
+  if (App.peutEcrire()) {
     carte.setAttribute("role", "button");
     carte.setAttribute("tabindex", "0");
     carte.setAttribute("aria-label", "Modifier " + t.terme);
@@ -177,7 +177,7 @@ function dessinerHistoire(contenu) {
     const fiches = fichesFiltrees();
     liste.replaceChildren();
     if (!App.donnees.histoire.length) {
-      liste.append(el("div", { class: "vide", text: App.estEditrice() ? "Pas encore de fiche. Touche + pour écrire la première." : "Pas encore de fiche." }));
+      liste.append(el("div", { class: "vide", text: App.peutEcrire() ? "Pas encore de fiche. Touche + pour écrire la première." : "Pas encore de fiche." }));
       return;
     }
     if (!fiches.length) { liste.append(el("div", { class: "vide", text: "Aucune fiche ne correspond." })); return; }
@@ -207,7 +207,7 @@ function remplirFicheHistoire(c, id, retour) {
   const h = App.donnees.histoire.find((x) => x.id === id);
   if (!h) { c.append(el("div", { class: "feuille-haut" }, App.boutonRetour(retour)), el("div", { class: "vide", text: "Cette fiche n'existe plus." })); return; }
   c.append(el("div", { class: "feuille-haut" }, App.boutonRetour(retour),
-    App.estEditrice() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireHistoire(h.id) }, "Modifier") : null));
+    App.peutEcrire() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireHistoire(h.id) }, "Modifier") : null));
   c.append(el("h1", { text: h.titre }));
   c.append(el("div", { class: "puces" }, (h.epoques || []).length
     ? h.epoques.map((e) => el("span", { class: "puce", text: EPOQUES[e] }))

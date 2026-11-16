@@ -286,3 +286,21 @@ input[type=date]::-webkit-date-and-time-value { text-align: left; }
 .carte-terme .exemple { font-size: 14px; color: var(--gris); font-style: italic; }
 .carte-terme a { align-self: flex-start; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; min-height: 32px; }
 textarea.grand { min-height: 220px; }
+
+/* Filtres de l'onglet Steps : une ligne par groupe, 3 pilules de même largeur */
+.filtres-lignes { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.filtres-lignes .filtres { margin-bottom: 0; }
+.filtres.rang { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.filtres.rang .filtre { padding: 0 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 360px) { .filtres.rang .filtre { font-size: 12px; padding: 0 2px; letter-spacing: -0.2px; } .filtres.rang .filtre[aria-pressed=true] { font-weight: 600; } }
+
+/* ---------- Hors connexion et nouvelle version (étape 4) ---------- */
+#bandeau { position: fixed; z-index: 55; left: 0; right: 0; bottom: calc(var(--bas) + 64px); min-height: 30px;
+  display: flex; align-items: center; justify-content: center; gap: 12px; padding: 4px 12px;
+  background: var(--gris); color: var(--blanc); font-size: 13px; font-weight: 600; }
+#bandeau.version { background: var(--or); color: var(--encre); }
+#bandeau button { height: 28px; padding: 0 14px; border: none; border-radius: 14px; background: var(--encre); color: var(--blanc); font-weight: 700; font-size: 13px; }
+body.avec-bandeau .bouton-hasard { bottom: calc(var(--bas) + 114px); }
+body.avec-bandeau .panneau-lieu { bottom: calc(var(--bas) + 94px); }
+body.avec-bandeau .zone-carte { bottom: calc(var(--bas) + 94px); }
+body.avec-bandeau #contenu { padding-bottom: calc(var(--bas) + 200px); }

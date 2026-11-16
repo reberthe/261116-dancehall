@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#E2B84A"/>
+  <g fill="none" stroke="#1E1E1C" stroke-width="12" stroke-linecap="round" opacity="0.85">
+    <path d="M60 140 a230 230 0 0 1 90 -80"/>
+    <path d="M452 372 a230 230 0 0 1 -90 80"/>
+  </g>
+  <circle cx="256" cy="256" r="196" fill="#1E1E1C"/>
+  <g fill="none" stroke="#3A3833" stroke-width="3">
+    <circle cx="256" cy="256" r="176"/><circle cx="256" cy="256" r="156"/><circle cx="256" cy="256" r="136"/><circle cx="256" cy="256" r="116"/>
+  </g>
+  <path d="M256 70 a186 186 0 0 1 150 76" fill="none" stroke="#F4F0E6" stroke-width="8" stroke-linecap="round" opacity="0.5"/>
+  <circle cx="256" cy="256" r="86" fill="#2F7A4D"/>
+  <clipPath id="etiquette"><circle cx="256" cy="256" r="86"/></clipPath>
+  <path d="M170 170 L342 342 M342 170 L170 342" stroke="#E2B84A" stroke-width="22" clip-path="url(#etiquette)"/>
+  <g fill="#1E1E1C" clip-path="url(#etiquette)">
+    <path d="M170 186 L240 256 L170 326 Z"/><path d="M342 186 L272 256 L342 326 Z"/>
+  </g>
+  <circle cx="256" cy="256" r="12" fill="#F4F0E6"/>
+</svg>

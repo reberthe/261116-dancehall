@@ -12,6 +12,8 @@ const App = {
   ongletActif: "steps",
   feuilles: [],
   derniereLecture: 0,
+  horsLigne: false,             // pas de réseau : lecture seule, données de la copie du téléphone
+  nouvelleVersion: null,        // service worker en attente (bandeau « Nouvelle version »)
 };
 
 function donneesVides() {
@@ -148,6 +150,13 @@ function message(texte, erreur = false) {
   minuterieMessage = setTimeout(() => { zone.className = ""; }, erreur ? 5000 : 2500);
 }
 
+// Pas de réseau ? (Chrome : « Failed to fetch », Safari : « Load failed », Firefox : « NetworkError »)
+function estErreurReseau(erreur) {
+  if (!navigator.onLine) return true;
+  const texte = erreur ? (erreur.name || "") + " " + (erreur.message || "") : "";
+  return /Failed to fetch|Load failed|NetworkError|network|AuthRetryableFetchError/i.test(texte);
+}
+
 // Erreur Supabase → phrase compréhensible
 function erreurLisible(erreur) {
   const code = erreur && erreur.code;
@@ -155,12 +164,13 @@ function erreurLisible(erreur) {
   if (code === "23503") return "Cette fiche est utilisée ailleurs : impossible de la supprimer.";
   if (code === "23514") return "Une des valeurs n'est pas acceptée.";
   if (code === "42501") return "Tu n'as pas le droit de faire ça.";
-  if (erreur && /Failed to fetch|NetworkError|network/i.test(erreur.message || "")) return "Pas de réseau : réessaie plus tard.";
+  if (estErreurReseau(erreur)) return "Pas de réseau : réessaie plus tard.";
   return "Erreur : " + ((erreur && erreur.message) || "inconnue");
 }
 
 App.estEditrice = () => !!App.profil && (App.profil.role === "admin" || App.profil.role === "editrice");
 App.estAdmin = () => !!App.profil && App.profil.role === "admin";
+App.peutEcrire = () => App.estEditrice() && !App.horsLigne;   // boutons d'ajout et de modification
 App.createur = (id) => App.donnees.createurs.find((c) => c.id === id) || null;
 App.lieu = (id) => App.donnees.lieux.find((l) => l.id === id) || null;
 // « Trench Town, Kingston » pour un quartier, « Kingston » pour une ville
@@ -248,8 +258,25 @@ App.chargerTout = async function () {
     App.donnees.modifs = new Map(modifs.map((m) => [m.table_nom + ":" + m.fiche_id, m]));
   }
   App.derniereLecture = Date.now();
+  App.sauverCopie();
   await App.chargerPhotos();
 };
+
+// ---------- Copie des données sur le téléphone (lecture hors connexion) ----------
+// Effacée à la déconnexion. Les photos n'y sont pas (liens signés).
+const CLE_COPIE = "copie";
+App.sauverCopie = function () {
+  const d = App.donnees;
+  ecrireLocal(CLE_COPIE, { version: 1, le: new Date().toISOString(), profil: App.profil, email: App.email,
+    donnees: { ...d, perso: [...d.perso.values()], modifs: [...d.modifs.values()] } });
+};
+App.lireCopie = function () {
+  const c = lireLocal(CLE_COPIE, null);
+  return c && c.version === 1 && c.profil && c.donnees ? c : null;
+};
+function effacerCopie() {
+  try { localStorage.removeItem("dh_" + CLE_COPIE); } catch (e) { /* tant pis */ }
+}
 
 // ---------- Photos (dossier fermé : liens signés) ----------
 // Une photo est retrouvée par son chemin ET la date de modification de la fiche :
@@ -339,7 +366,9 @@ App.menuProfil = function () {
       el("h1", { text: App.profil.prenom }),
       el("div", { class: "bloc" },
         el("h2", { text: "Compte connecté" }), el("p", { text: App.email || "?" }),
-        el("h2", { text: "Mes droits" }), el("p", { text: roles[App.profil.role] || App.profil.role })),
+        el("h2", { text: "Mes droits" }), el("p", { text: roles[App.profil.role] || App.profil.role }),
+        App.horsLigne ? el("h2", { text: "Hors connexion" }) : null,
+        App.horsLigne ? el("p", { text: "Données du " + dateLisible((App.lireCopie() || {}).le) + ", en lecture seule." }) : null),
       el("button", { type: "button", class: "bouton-danger", onclick: App.deconnecter }, "Se déconnecter de ce téléphone"),
     );
   });
@@ -358,14 +387,19 @@ function montrer(ecran) {
 
 App.entrer = async function () {
   const { data, error } = await App.client.rpc("mon_profil");
-  if (error) { message(erreurLisible(error), true); montrer("ecran-connexion"); return; }
+  if (error) {
+    if (estErreurReseau(error) && App.lireCopie()) { App.entrerHorsLigne(); return; }
+    message(erreurLisible(error), true); montrer("ecran-connexion"); return;
+  }
   App.profil = data && data[0] ? data[0] : null;
-  if (!App.profil) { montrer("ecran-sans-acces"); return; }
+  if (!App.profil) { effacerCopie(); montrer("ecran-sans-acces"); return; }
   const { data: s } = await App.client.auth.getSession();
   App.email = s && s.session && s.session.user ? s.session.user.email || "" : "";
   try {
     await App.chargerTout();
+    App.changerHorsLigne(false);
   } catch (e) {
+    if (estErreurReseau(e) && App.lireCopie()) { App.entrerHorsLigne(); return; }
     message(erreurLisible(e), true);
   }
   const memorise = lireLocal("onglet", "steps");
@@ -375,8 +409,77 @@ App.entrer = async function () {
   App.redessiner();
 };
 
+// Démarrage sans réseau : la copie du téléphone, en lecture seule
+App.entrerHorsLigne = function () {
+  const c = App.lireCopie();
+  App.profil = c.profil;
+  App.email = c.email || "";
+  App.donnees = { ...donneesVides(), ...c.donnees,
+    perso: new Map((c.donnees.perso || []).map((p) => [p.step_id, p])),
+    modifs: new Map((c.donnees.modifs || []).map((m) => [m.table_nom + ":" + m.fiche_id, m])) };
+  App.photos = new Map();
+  App.changerHorsLigne(true);
+  const memorise = lireLocal("onglet", "steps");
+  App.ongletActif = App.onglets[memorise] && (!App.onglets[memorise].visible || App.onglets[memorise].visible()) ? memorise : "steps";
+  montrer("appli");
+  App.dessinerBarre();
+  App.redessiner();
+};
+
+App.changerHorsLigne = function (horsLigne) {
+  App.horsLigne = horsLigne;
+  document.body.classList.toggle("hors-ligne", horsLigne);
+  App.majBandeau();
+};
+
+// Le réseau revient : on se reconnecte (la session se renouvelle) et on recharge tout
+App.reconnecter = async function () {
+  if (!App.horsLigne || !navigator.onLine) return;
+  const { data } = await App.client.auth.getSession();
+  if (!data.session) return;   // session pas encore renouvelée : on réessaiera
+  App.fermerToutesLesFeuilles();
+  await App.entrer();
+  if (!App.horsLigne) message("Connexion retrouvée");
+};
+
+// ---------- Bandeau en bas : hors connexion, ou nouvelle version ----------
+App.majBandeau = function () {
+  const b = document.getElementById("bandeau");
+  b.replaceChildren();
+  if (App.nouvelleVersion) {
+    b.className = "version";
+    b.append(el("span", { text: "Nouvelle version disponible" }),
+      el("button", { type: "button", onclick: () => { App.rechargementDemande = true; App.nouvelleVersion.postMessage("activer"); } }, "Recharger"));
+  } else if (App.horsLigne && App.profil) {
+    b.className = "";
+    b.append(el("span", { text: "Hors connexion · lecture seule" }));
+  }
+  b.hidden = !b.childNodes.length;
+  document.body.classList.toggle("avec-bandeau", !b.hidden);
+};
+
+// ---------- Service worker : appli gardée sur le téléphone, mises à jour ----------
+App.enregistrerServiceWorker = async function () {
+  if (!("serviceWorker" in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.register("sw.js");
+    const proposer = (sw) => { App.nouvelleVersion = sw; App.majBandeau(); };
+    if (reg.waiting && navigator.serviceWorker.controller) proposer(reg.waiting);
+    reg.addEventListener("updatefound", () => {
+      const sw = reg.installing;
+      if (sw) sw.addEventListener("statechange", () => { if (sw.state === "installed" && navigator.serviceWorker.controller) proposer(sw); });
+    });
+    // On recharge seulement quand on l'a demandé (pas à la toute première installation)
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (App.rechargementDemande) location.reload(); });
+    App.verifierVersion = () => reg.update().catch(() => { /* hors connexion */ });
+  } catch (e) { /* pas de service worker : l'appli marche quand même, en ligne */ }
+  // Demande à l'iPhone de ne pas effacer les données de l'appli (accordé pour une appli de l'écran d'accueil)
+  try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) { /* tant pis */ }
+};
+
 App.deconnecter = async function () {
   App.fermerToutesLesFeuilles();
+  effacerCopie();
   await App.client.auth.signOut({ scope: "local" });   // ce téléphone seulement
   if (App.quandOnQuitte) { App.quandOnQuitte(); App.quandOnQuitte = null; }
   document.getElementById("contenu").replaceChildren();
@@ -384,6 +487,7 @@ App.deconnecter = async function () {
   App.email = "";
   App.donnees = donneesVides();
   App.photos = new Map();
+  App.changerHorsLigne(false);
   montrer("ecran-connexion");
 };
 
@@ -416,14 +520,24 @@ App.demarrer = async function () {
 
   // En revenant sur l'appli après un moment, on relit les données (Jade a pu modifier entre-temps)
   document.addEventListener("visibilitychange", async () => {
-    if (document.visibilityState !== "visible" || !App.profil) return;
+    if (document.visibilityState !== "visible") return;
+    if (App.verifierVersion) App.verifierVersion();
+    if (!App.profil) return;
+    if (App.horsLigne) { App.reconnecter(); return; }
     if (Date.now() - App.derniereLecture < 60 * 1000) return;
     try { await App.chargerTout(); if (!App.feuilles.length) App.redessiner(); } catch (e) { /* hors connexion : on garde ce qu'on a */ }
     // (si une fiche est ouverte, on ne la redessine pas sous les doigts : elle le sera au prochain enregistrement)
   });
 
-  const { data } = await App.client.auth.getSession();
+  // Réseau perdu / retrouvé
+  window.addEventListener("offline", () => { if (App.profil && !App.horsLigne) { App.changerHorsLigne(true); App.rafraichir(); } });
+  window.addEventListener("online", () => { App.reconnecter(); });
+
+  App.enregistrerServiceWorker();
+
+  const { data, error } = await App.client.auth.getSession();
   if (data.session) await App.entrer();
+  else if ((!navigator.onLine || estErreurReseau(error)) && App.lireCopie()) App.entrerHorsLigne();   // session à renouveler, pas de réseau
   else montrer("ecran-connexion");
 };
 

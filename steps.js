@@ -42,7 +42,7 @@ function pastilleNiveau(niveau) {
 
 // ---------- Liste ----------
 function dessinerSteps(contenu) {
-  const actions = App.estEditrice()
+  const actions = App.peutEcrire()
     ? [el("button", { type: "button", class: "bouton-rond", "aria-label": "Ajouter un step", onclick: () => ouvrirFormulaireStep(null) }, icone(ICONES.plus, 22, 2.6))]
     : [];
   contenu.append(App.entete("Steps", ...actions));
@@ -52,13 +52,17 @@ function dessinerSteps(contenu) {
   champ.addEventListener("input", () => { filtresSteps.recherche = champ.value; dessinerListe(); });
   contenu.append(el("label", { class: "champ-recherche" }, icone(ICONES.loupe, 18), champ));
 
-  const filtres = el("div", { class: "filtres", role: "group", "aria-label": "Filtres" });
+  // Filtres : « À travailler » (Emma et Jade), puis une ligne pour les époques, une ligne pour man / gyal / neutre
+  const filtres = el("div", { class: "filtres-lignes", role: "group", "aria-label": "Filtres" });
   const pilule = (texte, actif, basculer) => el("button", { type: "button", class: "filtre", "aria-pressed": actif ? "true" : "false",
     onclick: () => { basculer(); sauverFiltres(); App.redessiner(); } }, texte);
   const basculerDans = (liste, valeur) => { const i = liste.indexOf(valeur); if (i >= 0) liste.splice(i, 1); else liste.push(valeur); };
-  if (App.estEditrice()) filtres.append(pilule("À travailler", filtresSteps.aTravailler, () => { filtresSteps.aTravailler = !filtresSteps.aTravailler; }));
-  for (const [cle, nom] of Object.entries(EPOQUES)) filtres.append(pilule(nom, filtresSteps.epoques.includes(cle), () => basculerDans(filtresSteps.epoques, cle)));
-  for (const cle of ["man", "gyal", "neutre"]) filtres.append(pilule(ETIQUETTES[cle].nom, filtresSteps.etiquettes.includes(cle), () => basculerDans(filtresSteps.etiquettes, cle)));
+  if (App.estEditrice()) filtres.append(el("div", { class: "filtres" },
+    pilule("À travailler", filtresSteps.aTravailler, () => { filtresSteps.aTravailler = !filtresSteps.aTravailler; })));
+  filtres.append(el("div", { class: "filtres rang" }, Object.entries(EPOQUES).map(([cle, nom]) =>
+    pilule(nom, filtresSteps.epoques.includes(cle), () => basculerDans(filtresSteps.epoques, cle)))));
+  filtres.append(el("div", { class: "filtres rang" }, ["gyal", "man", "neutre"].map((cle) =>
+    pilule(ETIQUETTES[cle].nom, filtresSteps.etiquettes.includes(cle), () => basculerDans(filtresSteps.etiquettes, cle)))));
   contenu.append(filtres);
 
   const compte = el("p", { class: "compte" });
@@ -108,7 +112,7 @@ function remplirFicheStep(c, id) {
 
   c.append(el("div", { class: "feuille-haut" },
     App.boutonRetour("Steps"),
-    App.estEditrice() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireStep(s.id) }, "Modifier") : null));
+    App.peutEcrire() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireStep(s.id) }, "Modifier") : null));
 
   c.append(el("h1", { text: s.nom }));
   if (s.autres_noms) c.append(el("p", { class: "sous-titre", text: "aussi appelé : " + s.autres_noms }));
@@ -190,6 +194,11 @@ function blocPrive(stepId) {
   bloc.append(notes, el("div", { class: "ligne-boutons" }, boutonNotes));
   const vus = vuEnCours(stepId);   // cours.js
   if (vus) bloc.append(vus);
+  if (App.horsLigne) {   // lecture seule
+    bloc.querySelectorAll("button, input").forEach((x) => { x.disabled = true; });
+    notes.readOnly = true;
+    if (vus) vus.querySelectorAll("button").forEach((x) => { x.disabled = false; });   // ouvrir un cours reste possible
+  }
 
   function remplacerBloc() { bloc.replaceWith(blocPrive(stepId)); }
   return bloc;
@@ -202,12 +211,13 @@ async function sauverPerso(stepId, champs) {
     if (App.donnees.perso.has(stepId)) {
       const r = await App.client.from("perso_steps").update(champs).eq("step_id", stepId).select(colonnes);
       if (r.error) throw r.error;
-      if (r.data.length) { App.donnees.perso.set(stepId, r.data[0]); return true; }
+      if (r.data.length) { App.donnees.perso.set(stepId, r.data[0]); App.sauverCopie(); return true; }
       // la ligne n'existe plus (supprimée ailleurs) : on la recrée
     }
     const r = await App.client.from("perso_steps").insert({ step_id: stepId, ...champs }).select(colonnes);
     if (r.error) throw r.error;
     App.donnees.perso.set(stepId, r.data[0]);
+    App.sauverCopie();   // la copie hors connexion suit tout de suite
     return true;
   } catch (e) {
     message(erreurLisible(e), true);

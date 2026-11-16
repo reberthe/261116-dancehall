@@ -51,7 +51,7 @@ function coursFiltres() {
 // ---------- Liste ----------
 function dessinerCours(contenu) {
   contenu.append(App.entete("Cours",
-    el("button", { type: "button", class: "bouton-rond", "aria-label": "Noter un cours", onclick: () => ouvrirFormulaireCours(null) }, icone(ICONES.plus, 22, 2.6))));
+    App.peutEcrire() ? el("button", { type: "button", class: "bouton-rond", "aria-label": "Noter un cours", onclick: () => ouvrirFormulaireCours(null) }, icone(ICONES.plus, 22, 2.6)) : null));
 
   const champ = el("input", { type: "search", placeholder: "Un prof, une salle, un step…", "aria-label": "Rechercher un cours",
     value: rechercheCours, autocomplete: "off" });
@@ -65,7 +65,7 @@ function dessinerCours(contenu) {
   function dessinerListe() {
     const cours = coursFiltres();
     liste.replaceChildren();
-    if (!App.donnees.cours.length) { liste.append(el("div", { class: "vide", text: "Pas encore de cours. Touche + pour noter ton premier cours." })); return; }
+    if (!App.donnees.cours.length) { liste.append(el("div", { class: "vide", text: App.peutEcrire() ? "Pas encore de cours. Touche + pour noter ton premier cours." : "Pas encore de cours." })); return; }
     if (!cours.length) { liste.append(el("div", { class: "vide", text: "Aucun cours ne correspond." })); return; }
     let moisCourant = null;
     for (const c of cours) {
@@ -100,7 +100,7 @@ function remplirFicheCours(c, id, retour) {
   if (!cours) { c.append(el("div", { class: "feuille-haut" }, App.boutonRetour(retour)), el("div", { class: "vide", text: "Ce cours n'existe plus." })); return; }
 
   c.append(el("div", { class: "feuille-haut" }, App.boutonRetour(retour),
-    el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireCours(cours.id) }, "Modifier")));
+    App.peutEcrire() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireCours(cours.id) }, "Modifier") : null));
   c.append(el("h1", { text: jourLong(cours.jour) }));
   if (cours.salle) c.append(el("p", { class: "sous-titre", text: cours.salle }));
 
