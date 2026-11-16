@@ -30,6 +30,7 @@ Tout le reste est dans les scripts `sql/`.
 4. `donnees/01_membres.sql` ⚠️ **gardé sur l'ordi d'Emma, jamais sur GitHub** (prénoms des copines, dépôt public)
 5. `sql/04_test_securite.sql` : toutes les lignes doivent être `ok = true`
 6. `sql/05_depart.sql` : données de départ (lieux, créateurs, steps, avec leurs sources)
+7. `sql/06_cours_steps_gardes.sql` : un step supprimé reste dans les cours où il a été vu (son nom est gardé). Doit afficher « ok : un step supprimé reste dans le cours »
 
 Tous les scripts sont rejouables sans erreur.
 
@@ -40,6 +41,7 @@ Tous les scripts sont rejouables sans erreur.
 - `app.js` : connexion, chargement des données, onglets, fiches, photos (liens signés)
 - `steps.js` : onglet Steps
 - `createurs.js` : liste des créateurs (mode « Liste » de l'onglet Carte), fiches crew et personne, membres, photos de profil (avec cadrage)
+- `cours.js` : onglet Cours (privé : chacune ne voit que ses cours), « Vu en cours le … » dans la fiche d'un step
 - `carte.js` : onglet Carte (bulles des villes puis des quartiers, « Lieu inconnu » au centre de la Jamaïque), lieux (création, renommage, suppression)
 
 Après chaque modification, le numéro `?v=` change dans `index.html` pour que les téléphones prennent la nouvelle version.

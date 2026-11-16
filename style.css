@@ -261,3 +261,19 @@ body.avec-carte #contenu { padding: 0; }
 .zoom { flex-direction: row; align-items: center; gap: 10px; width: 260px; font-size: 20px; color: var(--encre); }
 .zoom input { flex: 1; accent-color: var(--vert); height: 32px; }
 .cadre p { margin: 0; }
+
+/* ---------- Cours (étape 3d) ---------- */
+.date-cours { width: 44px; height: 44px; border-radius: 12px; background: var(--sable); flex-shrink: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+.date-jour { font-size: 17px; font-weight: 800; }
+.date-semaine { font-size: 11px; color: var(--gris); margin-top: 2px; }
+.ligne.supprime { opacity: 0.7; }
+.puce.choisie { gap: 4px; padding-right: 4px; background: var(--sable); }
+.puce.choisie.supprime { color: var(--gris); }
+.puce .retirer { width: 26px; height: 26px; border: none; border-radius: 13px; background: var(--blanc); font-size: 12px; font-weight: 700; }
+.vu-en-cours { display: flex; flex-direction: column; gap: 6px; }
+.vu-en-cours .puce { border: none; background: var(--sable); }
+input[type=date], input[type=url] { width: 100%; min-height: 48px; padding: 12px 14px; border: 1.5px solid var(--trait); border-radius: 14px;
+  background: var(--blanc); font-size: 16px; color: var(--encre); -webkit-appearance: none; appearance: none; }
+input[type=date] { display: block; text-align: left; }
+input[type=date]::-webkit-date-and-time-value { text-align: left; }

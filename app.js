@@ -20,6 +20,8 @@ function donneesVides() {
     createurs: [],
     lieux: [],
     membres: [],                // lignes de membres_crew
+    cours: [],                  // mes cours (Emma et Jade, chacune les siens)
+    coursSteps: [],             // steps vus dans mes cours
     perso: new Map(),           // step_id → ligne de perso_steps (partie privée)
     modifs: new Map(),          // "table:id" → { prenom, modifie_le } (Emma et Jade seulement)
   };
@@ -225,10 +227,14 @@ App.chargerTout = async function () {
   App.donnees.lieux = lieux;
   App.donnees.membres = membres;
   if (App.estEditrice()) {
-    const [perso, modifs] = await Promise.all([
+    const [perso, modifs, cours, coursSteps] = await Promise.all([
       toutLire("perso_steps", "step_id, niveau, a_travailler, notes"),
       toutLire("modifications", "table_nom, fiche_id, prenom, modifie_le"),
+      toutLire("cours", "id, jour, prof_texte, prof_createur_id, salle, lien_chore, notes, modifie_le", "id"),
+      toutLire("cours_steps", "id, cours_id, step_id, nom_step", "id"),
     ]);
+    App.donnees.cours = cours;
+    App.donnees.coursSteps = coursSteps;
     App.donnees.perso = new Map(perso.map((p) => [p.step_id, p]));
     App.donnees.modifs = new Map(modifs.map((m) => [m.table_nom + ":" + m.fiche_id, m]));
   }
@@ -336,8 +342,7 @@ function ongletBientot(texte) {
 }
 App.enregistrerOnglet("steps", { titre: "Steps", icone: ICONES.steps, dessiner: () => {} });   // remplacé par steps.js
 App.enregistrerOnglet("carte", { titre: "Carte", icone: ICONES.carte, dessiner: () => {} });   // remplacé par carte.js
-App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.estEditrice(),
-  dessiner: ongletBientot({ titre: "Cours", message: "Tes cours arrivent à l'étape 3d." }) });
+App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.estEditrice(), dessiner: () => {} });   // remplacé par cours.js
 App.enregistrerOnglet("savoir", { titre: "Savoir", icone: ICONES.savoir,
   dessiner: ongletBientot({ titre: "Savoir", message: "Le lexique et l'histoire arrivent à l'étape 3e." }) });
 

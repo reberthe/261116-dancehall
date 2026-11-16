@@ -188,6 +188,8 @@ function blocPrive(stepId) {
     boutonNotes.disabled = false;
   } }, "Enregistrer la note");
   bloc.append(notes, el("div", { class: "ligne-boutons" }, boutonNotes));
+  const vus = vuEnCours(stepId);   // cours.js
+  if (vus) bloc.append(vus);
 
   function remplacerBloc() { bloc.replaceWith(blocPrive(stepId)); }
   return bloc;
