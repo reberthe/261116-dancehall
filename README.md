@@ -34,6 +34,14 @@ Tout le reste est dans les scripts `sql/`.
 8. `sql/07_sous_categories.sql` : sous-catégories des steps (pour l'instant « Waistline technique » sous Female). Pour en ajouter une : une ligne de plus dans ce script, puis le relancer. Doit afficher « ok : Waistline technique (gyal) »
 9. `sql/08_instagram.sql` : compte Instagram des créateurs (le @ cliquable dans leur fiche). Doit afficher « ok : compte Instagram des créateurs »
 
+## 💾 Sauvegarde (une fois par mois)
+
+L'offre gratuite de Supabase ne fait pas de sauvegarde automatique.
+- `sql/09_sauvegarde.sql` (SQL Editor → Run) : copier le résultat dans `sauvegarde_AAAA-MM-JJ.json`, sur l'ordi d'Emma. ⚠️ Jamais sur GitHub : il contient les cours et la partie privée de Jade, les prénoms et les rôles. Garder les 3 dernières.
+- `sql/10_restauration.sql` : seulement en cas de perte des données. Les tables doivent être vides (le script n'écrase jamais rien) ; coller la sauvegarde à la place de `COLLER_ICI`.
+- Les photos ne sont pas dans la sauvegarde.
+- Un rappel arrive le 1er de chaque mois à 18 h 35 (tâche programmée « Rappel sauvegarde Riddim »).
+
 Dans la base, les étiquettes gardent leurs noms techniques (`man`, `gyal`) ; l'appli les affiche « Male » (M) et « Female » (F).
 
 ## 🎥 Vidéos (Google Drive d'Emma)
