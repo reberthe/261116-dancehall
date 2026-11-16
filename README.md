@@ -31,6 +31,7 @@ Tout le reste est dans les scripts `sql/`.
 5. `sql/04_test_securite.sql` : toutes les lignes doivent être `ok = true`
 6. `sql/05_depart.sql` : données de départ (lieux, créateurs, steps, avec leurs sources)
 7. `sql/06_cours_steps_gardes.sql` : un step supprimé reste dans les cours où il a été vu (son nom est gardé). Doit afficher « ok : un step supprimé reste dans le cours »
+8. `sql/07_sous_categories.sql` : sous-catégories des steps (pour l'instant « Waistline technique » sous Gyal). Pour en ajouter une : une ligne de plus dans ce script, puis le relancer. Doit afficher « ok : Waistline technique (gyal) »
 
 Tous les scripts sont rejouables sans erreur.
 

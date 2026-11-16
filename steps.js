@@ -3,18 +3,28 @@
 
 // Filtres gardés sur le téléphone
 const filtresSteps = Object.assign(
-  { recherche: "", aTravailler: false, epoques: [], etiquettes: [] },
+  { recherche: "", aTravailler: false, epoques: [], etiquettes: [], sousCategories: [] },
   lireLocal("filtres_steps", {})
 );
 let dernierTirage = null;
 
 function sauverFiltres() {
-  ecrireLocal("filtres_steps", { aTravailler: filtresSteps.aTravailler, epoques: filtresSteps.epoques, etiquettes: filtresSteps.etiquettes });
+  ecrireLocal("filtres_steps", { aTravailler: filtresSteps.aTravailler, epoques: filtresSteps.epoques, etiquettes: filtresSteps.etiquettes,
+    sousCategories: filtresSteps.sousCategories });
 }
 
 // Steps qui passent la recherche et les filtres
+// Sous-catégories choisies dont l'étiquette est aussi choisie (ex. Waistline seulement si Gyal est choisi)
+function sousCategoriesActives() {
+  return filtresSteps.sousCategories.filter((cle) => {
+    const sc = App.sousCategorie(cle);
+    return sc && filtresSteps.etiquettes.includes(sc.etiquette);
+  });
+}
+
 function stepsFiltres() {
   const mots = sansAccents(filtresSteps.recherche).split(/\s+/).filter(Boolean);
+  const sousCats = sousCategoriesActives();
   return App.donnees.steps.filter((s) => {
     if (filtresSteps.aTravailler && App.estEditrice()) {
       const p = App.donnees.perso.get(s.id);
@@ -22,9 +32,11 @@ function stepsFiltres() {
     }
     if (filtresSteps.epoques.length && !filtresSteps.epoques.includes(s.epoque)) return false;
     if (filtresSteps.etiquettes.length && !filtresSteps.etiquettes.includes(s.etiquette)) return false;
+    if (sousCats.length && !sousCats.includes(s.sous_categorie)) return false;
     if (mots.length) {
       const c = App.createur(s.createur_id);
-      const texte = sansAccents([s.nom, s.autres_noms, c && c.nom, s.chanson].join(" "));
+      const sc = App.sousCategorie(s.sous_categorie);
+      const texte = sansAccents([s.nom, s.autres_noms, c && c.nom, s.chanson, sc && sc.nom].join(" "));
       if (!mots.every((m) => texte.includes(m))) return false;
     }
     return true;
@@ -33,7 +45,8 @@ function stepsFiltres() {
 
 function sousTitreStep(s) {
   const c = App.createur(s.createur_id);
-  return [c ? c.nom : "Créateur inconnu", s.epoque ? EPOQUES[s.epoque] : null].filter(Boolean).join(" · ");
+  const sc = App.sousCategorie(s.sous_categorie);
+  return [c ? c.nom : "Créateur inconnu", s.epoque ? EPOQUES[s.epoque] : null, sc ? sc.nom : null].filter(Boolean).join(" · ");
 }
 
 function pastilleNiveau(niveau) {
@@ -62,7 +75,14 @@ function dessinerSteps(contenu) {
   filtres.append(el("div", { class: "filtres rang" }, Object.entries(EPOQUES).map(([cle, nom]) =>
     pilule(nom, filtresSteps.epoques.includes(cle), () => basculerDans(filtresSteps.epoques, cle)))));
   filtres.append(el("div", { class: "filtres rang" }, ["gyal", "man", "neutre"].map((cle) =>
-    pilule(ETIQUETTES[cle].nom, filtresSteps.etiquettes.includes(cle), () => basculerDans(filtresSteps.etiquettes, cle)))));
+    pilule(ETIQUETTES[cle].nom, filtresSteps.etiquettes.includes(cle), () => {
+      basculerDans(filtresSteps.etiquettes, cle);
+      filtresSteps.sousCategories = sousCategoriesActives();   // décocher Gyal enlève aussi Waistline
+    }))));
+  // Sous-catégories : seulement sous une étiquette choisie (ex. « Waistline technique » quand Gyal est choisi)
+  const sousCats = App.donnees.sousCategories.filter((sc) => filtresSteps.etiquettes.includes(sc.etiquette));
+  if (sousCats.length) filtres.append(el("div", { class: "filtres sous-filtres" }, sousCats.map((sc) =>
+    pilule(sc.nom, filtresSteps.sousCategories.includes(sc.cle), () => basculerDans(filtresSteps.sousCategories, sc.cle)))));
   contenu.append(filtres);
 
   const compte = el("p", { class: "compte" });
@@ -120,6 +140,8 @@ function remplirFicheStep(c, id) {
   const puces = el("div", { class: "puces" });
   puces.append(s.etiquette ? el("span", { class: "puce " + s.etiquette, text: ETIQUETTES[s.etiquette].lettre + " · " + ETIQUETTES[s.etiquette].nom })
     : el("span", { class: "puce", text: "Man / gyal / neutre : ?" }));
+  const sousCat = App.sousCategorie(s.sous_categorie);
+  if (sousCat) puces.append(el("span", { class: "puce sous-categorie", text: sousCat.nom }));
   puces.append(el("span", { class: "puce", text: s.epoque ? EPOQUES[s.epoque] : "Époque : ?" }));
   if (s.annee) puces.append(el("span", { class: "puce", text: String(s.annee) }));
   if (s.a_verifier) puces.append(el("span", { class: "puce", text: "À vérifier" }));
@@ -254,10 +276,21 @@ function ouvrirFormulaireStep(id) {
       ...Object.entries(EPOQUES).map(([cle, n]) => el("option", { value: cle, text: n, selected: s && s.epoque === cle })));
 
     let etiquette = s ? s.etiquette : null;
+    let sousCategorie = s ? s.sous_categorie || null : null;
     const segEtiquette = el("div", { class: "segments quatre", role: "group", "aria-label": "Man, gyal ou neutre" });
+    const zoneSousCat = el("div", { class: "formulaire" });
     function dessinerEtiquette() {
       segEtiquette.replaceChildren(...[["man", "Man"], ["gyal", "Gyal"], ["neutre", "Neutre"], [null, "?"]].map(([cle, n]) =>
         el("button", { type: "button", "aria-pressed": etiquette === cle ? "true" : "false", onclick: () => { etiquette = cle; dessinerEtiquette(); } }, n)));
+      // Sous-catégories de l'étiquette choisie (une au plus ; retoucher l'enlève)
+      const choix = App.donnees.sousCategories.filter((sc) => sc.etiquette === etiquette);
+      if (!choix.some((sc) => sc.cle === sousCategorie)) sousCategorie = null;
+      zoneSousCat.replaceChildren();
+      zoneSousCat.hidden = !choix.length;
+      if (choix.length) zoneSousCat.append(el("span", { class: "aide", text: "Sous-catégorie" }),
+        el("div", { class: "filtres", role: "group", "aria-label": "Sous-catégorie" }, choix.map((sc) =>
+          el("button", { type: "button", class: "filtre", "aria-pressed": sousCategorie === sc.cle ? "true" : "false",
+            onclick: () => { sousCategorie = sousCategorie === sc.cle ? null : sc.cle; dessinerEtiquette(); } }, sc.nom))));
     }
     dessinerEtiquette();
 
@@ -282,6 +315,7 @@ function ouvrirFormulaireStep(id) {
       el("label", {}, "Créé par", choixCreateur), el("div", { class: "ligne-boutons" }, nouveauCreateur),
       el("label", {}, "Époque", choixEpoque),
       el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Man, gyal ou neutre" }), segEtiquette),
+      zoneSousCat,
       el("label", {}, "Année (facultatif)", annee),
       el("label", {}, "Décomposition", decomposition),
       el("label", {}, "Chanson ou riddim", chanson),
@@ -318,6 +352,7 @@ function ouvrirFormulaireStep(id) {
         createur_id: choixCreateur.value ? Number(choixCreateur.value) : null,
         epoque: choixEpoque.value || null,
         etiquette,
+        sous_categorie: sousCategorie,
         annee: valeurAnnee,
         decomposition: decomposition.value.trim() || null,
         chanson: chanson.value.trim() || null,

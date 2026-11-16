@@ -22,6 +22,7 @@ function donneesVides() {
     createurs: [],
     lieux: [],
     membres: [],                // lignes de membres_crew
+    sousCategories: [],         // ex. « Waistline technique » (gyal) ; liste écrite par sql/07
     lexique: [],
     histoire: [],
     histoireCreateurs: [],      // créateurs concernés par une fiche d'histoire
@@ -172,6 +173,7 @@ App.estEditrice = () => !!App.profil && (App.profil.role === "admin" || App.prof
 App.estAdmin = () => !!App.profil && App.profil.role === "admin";
 App.peutEcrire = () => App.estEditrice() && !App.horsLigne;   // boutons d'ajout et de modification
 App.createur = (id) => App.donnees.createurs.find((c) => c.id === id) || null;
+App.sousCategorie = (cle) => App.donnees.sousCategories.find((x) => x.cle === cle) || null;
 App.lieu = (id) => App.donnees.lieux.find((l) => l.id === id) || null;
 // « Trench Town, Kingston » pour un quartier, « Kingston » pour une ville
 App.nomLieu = function (id) {
@@ -229,7 +231,7 @@ async function toutLire(table, colonnes, tri) {
 }
 
 App.chargerTout = async function () {
-  const [steps, createurs, lieux, membres, lexique, histoire, histoireCreateurs] = await Promise.all([
+  const [steps, createurs, lieux, membres, lexique, histoire, histoireCreateurs, sousCategories] = await Promise.all([
     toutLire("steps", "*", "id"),
     toutLire("createurs", "*", "id"),
     toutLire("lieux", "id, type, nom, ville_id, latitude, longitude, modifie_le", "id"),
@@ -237,7 +239,9 @@ App.chargerTout = async function () {
     toutLire("lexique", "id, terme, definition, exemple, lien, modifie_le", "id"),
     toutLire("histoire", "id, titre, epoques, texte, liens, modifie_le", "id"),
     toutLire("histoire_createurs", "histoire_id, createur_id"),
+    toutLire("sous_categories", "cle, etiquette, nom, ordre", "ordre"),
   ]);
+  App.donnees.sousCategories = sousCategories;
   App.donnees.lexique = lexique;
   App.donnees.histoire = histoire;
   App.donnees.histoireCreateurs = histoireCreateurs;

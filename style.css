@@ -304,3 +304,8 @@ body.avec-bandeau .bouton-hasard { bottom: calc(var(--bas) + 114px); }
 body.avec-bandeau .panneau-lieu { bottom: calc(var(--bas) + 94px); }
 body.avec-bandeau .zone-carte { bottom: calc(var(--bas) + 94px); }
 body.avec-bandeau #contenu { padding-bottom: calc(var(--bas) + 200px); }
+
+/* Sous-catégories (ex. Waistline technique sous Gyal) */
+.sous-filtres { margin: -2px 0 0; padding-left: 12px; border-left: 3px solid var(--or); }
+.sous-filtres .filtre { height: 32px; font-size: 13px; }
+.puce.sous-categorie { background: var(--blanc); border: 1.5px solid var(--or); }
