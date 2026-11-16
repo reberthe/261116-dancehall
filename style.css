@@ -277,3 +277,12 @@ input[type=date], input[type=url] { width: 100%; min-height: 48px; padding: 12px
   background: var(--blanc); font-size: 16px; color: var(--encre); -webkit-appearance: none; appearance: none; }
 input[type=date] { display: block; text-align: left; }
 input[type=date]::-webkit-date-and-time-value { text-align: left; }
+
+/* ---------- Savoir (étape 3e) ---------- */
+.carte-terme { padding: 14px 16px; border-radius: 20px; background: var(--blanc); display: flex; flex-direction: column; gap: 6px; }
+.carte-terme.modifiable { cursor: pointer; }
+.carte-terme h3 { margin: 0; font-size: 18px; }
+.carte-terme p { margin: 0; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.carte-terme .exemple { font-size: 14px; color: var(--gris); font-style: italic; }
+.carte-terme a { align-self: flex-start; display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; min-height: 32px; }
+textarea.grand { min-height: 220px; }

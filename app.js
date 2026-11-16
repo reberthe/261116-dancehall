@@ -20,6 +20,9 @@ function donneesVides() {
     createurs: [],
     lieux: [],
     membres: [],                // lignes de membres_crew
+    lexique: [],
+    histoire: [],
+    histoireCreateurs: [],      // créateurs concernés par une fiche d'histoire
     cours: [],                  // mes cours (Emma et Jade, chacune les siens)
     coursSteps: [],             // steps vus dans mes cours
     perso: new Map(),           // step_id → ligne de perso_steps (partie privée)
@@ -216,12 +219,18 @@ async function toutLire(table, colonnes, tri) {
 }
 
 App.chargerTout = async function () {
-  const [steps, createurs, lieux, membres] = await Promise.all([
+  const [steps, createurs, lieux, membres, lexique, histoire, histoireCreateurs] = await Promise.all([
     toutLire("steps", "*", "id"),
     toutLire("createurs", "*", "id"),
     toutLire("lieux", "id, type, nom, ville_id, latitude, longitude, modifie_le", "id"),
     toutLire("membres_crew", "crew_id, personne_id, fondateur, ancien"),
+    toutLire("lexique", "id, terme, definition, exemple, lien, modifie_le", "id"),
+    toutLire("histoire", "id, titre, epoques, texte, liens, modifie_le", "id"),
+    toutLire("histoire_createurs", "histoire_id, createur_id"),
   ]);
+  App.donnees.lexique = lexique;
+  App.donnees.histoire = histoire;
+  App.donnees.histoireCreateurs = histoireCreateurs;
   App.donnees.steps = steps;
   App.donnees.createurs = createurs;
   App.donnees.lieux = lieux;
@@ -336,15 +345,11 @@ App.menuProfil = function () {
   });
 };
 
-// Onglets qui arrivent plus tard
-function ongletBientot(texte) {
-  return (contenu) => contenu.append(App.entete(texte.titre), el("div", { class: "bientot", text: texte.message }));
-}
+// Onglets (dans l'ordre de la barre) ; chaque fichier remplace le sien
 App.enregistrerOnglet("steps", { titre: "Steps", icone: ICONES.steps, dessiner: () => {} });   // remplacé par steps.js
 App.enregistrerOnglet("carte", { titre: "Carte", icone: ICONES.carte, dessiner: () => {} });   // remplacé par carte.js
 App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.estEditrice(), dessiner: () => {} });   // remplacé par cours.js
-App.enregistrerOnglet("savoir", { titre: "Savoir", icone: ICONES.savoir,
-  dessiner: ongletBientot({ titre: "Savoir", message: "Le lexique et l'histoire arrivent à l'étape 3e." }) });
+App.enregistrerOnglet("savoir", { titre: "Savoir", icone: ICONES.savoir, dessiner: () => {} });   // remplacé par savoir.js
 
 // ---------- Connexion ----------
 function montrer(ecran) {

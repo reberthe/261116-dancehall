@@ -227,6 +227,16 @@ function remplirFicheCreateur(c, id, retour) {
     c.append(el("a", { class: "lien-video", href: l, target: "_blank", rel: "noopener noreferrer" }, icone(ICONES.lien, 18, 2), hote));
   }
 
+  // Fiches d'histoire où il apparaît (savoir.js)
+  const fiches = fichesDuCreateur(cr.id);
+  if (fiches.length) {
+    c.append(el("h2", { class: "titre-section", text: "Dans l'histoire · " + fiches.length }));
+    c.append(el("div", { class: "liste" }, fiches.map((h) => el("button", { type: "button", class: "ligne", onclick: () => ouvrirFicheHistoire(h.id, cr.nom) },
+      el("span", { class: "ligne-texte" }, el("span", { class: "ligne-titre", text: h.titre }),
+        el("span", { class: "ligne-sous", text: (h.epoques || []).map((e) => EPOQUES[e]).join(", ") || "Fiche d'histoire" })),
+      icone(ICONES.chevron, 18, 2.4)))));
+  }
+
   if (estCrew) {
     // Membres
     const membres = membresDe(cr.id);

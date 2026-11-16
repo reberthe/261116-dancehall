@@ -42,6 +42,7 @@ Tous les scripts sont rejouables sans erreur.
 - `steps.js` : onglet Steps
 - `createurs.js` : liste des créateurs (mode « Liste » de l'onglet Carte), fiches crew et personne, membres, photos de profil (avec cadrage)
 - `cours.js` : onglet Cours (privé : chacune ne voit que ses cours), « Vu en cours le … » dans la fiche d'un step
+- `savoir.js` : onglet Savoir (lexique en cartes, fiches d'histoire par époque avec les créateurs concernés)
 - `carte.js` : onglet Carte (bulles des villes puis des quartiers, « Lieu inconnu » au centre de la Jamaïque), lieux (création, renommage, suppression)
 
 Après chaque modification, le numéro `?v=` change dans `index.html` pour que les téléphones prennent la nouvelle version.
