@@ -39,13 +39,14 @@ Tous les scripts sont rejouables sans erreur.
 - `config.js` : adresse du projet et clé publique (jamais de clé secrète)
 - `app.js` : connexion, chargement des données, onglets, fiches, photos (liens signés)
 - `steps.js` : onglet Steps
-- `createurs.js` : onglet Carte (liste des créateurs en attendant la carte), fiches crew et personne, membres, photos de profil
+- `createurs.js` : liste des créateurs (mode « Liste » de l'onglet Carte), fiches crew et personne, membres, photos de profil (avec cadrage)
+- `carte.js` : onglet Carte (bulles des villes puis des quartiers, « Lieu inconnu » au centre de la Jamaïque), lieux (création, renommage, suppression)
 
 Après chaque modification, le numéro `?v=` change dans `index.html` pour que les téléphones prennent la nouvelle version.
 
 ## 📷 Photos de profil
 
-- Dossier fermé `photos` : `createurs/<identifiant>.jpg`, JPEG de 400 × 400, réduit sur le téléphone avant l'envoi.
+- Dossier fermé `photos` : `createurs/<identifiant>.jpg`, JPEG de 400 × 400, cadré et réduit sur le téléphone avant l'envoi.
 - Affichées par des liens signés valables 1 h.
 - Remplacer une photo écrase l'ancienne. Seule Emma peut supprimer une photo.
 
@@ -58,6 +59,12 @@ Après chaque modification, le numéro `?v=` change dans `index.html` pour que l
 
 - supabase-js 2.119.0
 - Leaflet 1.9.4
+
+## 🗺️ Carte et lieux
+
+- Fond de carte : OpenStreetMap standard, jamais gardé hors connexion (règle d'OpenStreetMap).
+- Recherche d'un lieu : Nominatim, seulement en touchant « Chercher », au plus une recherche toutes les 1,5 s, limitée à la Jamaïque.
+- Un lieu = un quartier ou une ville, jamais une adresse. Emma et Jade créent et renomment ; seule Emma supprime un lieu qui n'est pas utilisé.
 
 ## ©️ Données de la carte
 

@@ -1,5 +1,5 @@
-// createurs.js — onglet Carte (liste des créateurs en attendant la carte), fiches crew et personne,
-// formulaire, membres d'un crew, photo de profil
+// createurs.js — liste des créateurs (mode « Liste » de l'onglet Carte), fiches crew et personne,
+// formulaire, membres d'un crew, photo de profil (avec cadrage)
 "use strict";
 
 const TYPES = { crew: "Crews", personne: "Personnes" };
@@ -135,12 +135,13 @@ function createursFiltres() {
   }).sort(parNom);
 }
 
-function dessinerCarte(contenu) {
+// Mode « Liste » de l'onglet Carte (boutonsMode : le choix Carte | Liste, fourni par carte.js)
+function dessinerListeCreateurs(contenu, boutonsMode) {
   const actions = App.estEditrice()
     ? [el("button", { type: "button", class: "bouton-rond", "aria-label": "Ajouter un créateur", onclick: () => ouvrirFormulaireCreateur(null) }, icone(ICONES.plus, 22, 2.6))]
     : [];
   contenu.append(App.entete("Carte", ...actions));
-  contenu.append(el("p", { class: "petit bandeau", text: "La carte arrive à l'étape 3c. En attendant, voici tous les créateurs." }));
+  contenu.append(el("div", { class: "bandeau" }, boutonsMode));
 
   const champ = el("input", { type: "search", placeholder: "Un crew, une personne, un lieu…", "aria-label": "Rechercher un créateur",
     value: filtresCreateurs.recherche, autocomplete: "off" });
@@ -169,8 +170,6 @@ function dessinerCarte(contenu) {
   }
   dessinerListe();
 }
-
-App.enregistrerOnglet("carte", { titre: "Carte", icone: ICONES.carte, dessiner: dessinerCarte });
 
 // ---------- Fiche d'un créateur (crew ou personne) ----------
 function ouvrirFicheCreateur(id, retour = "Retour") {
@@ -299,15 +298,11 @@ function ouvrirFormulaireCreateur(id) {
     }
     dessinerChoix();
 
-    // Lieux : chaque ville, suivie de ses quartiers
-    const choixLieu = el("select", { "aria-label": "Lieu" }, el("option", { value: "", text: "— Aucun —" }));
-    const villes = App.donnees.lieux.filter((l) => l.type === "ville").sort(parNom);
-    for (const v of villes) {
-      choixLieu.append(el("option", { value: String(v.id), text: v.nom, selected: cr && cr.lieu_id === v.id }));
-      for (const q of App.donnees.lieux.filter((l) => l.ville_id === v.id).sort(parNom)) {
-        choixLieu.append(el("option", { value: String(q.id), text: q.nom + ", " + v.nom, selected: cr && cr.lieu_id === q.id }));
-      }
-    }
+    // Lieux : chaque ville, suivie de ses quartiers (carte.js)
+    const choixLieu = el("select", { "aria-label": "Lieu" });
+    remplirChoixLieux(choixLieu, cr ? cr.lieu_id : null);
+    const nouveauLieu = el("button", { type: "button", class: "bouton-secondaire",
+      onclick: () => ouvrirNouveauLieu({ quandCree: (idLieu) => remplirChoixLieux(choixLieu, idLieu) }) }, "+ Nouveau lieu");
 
     const pilulesEpoques = el("div", { class: "filtres", role: "group", "aria-label": "Époques" });
     function dessinerEpoques() {
@@ -335,7 +330,8 @@ function ouvrirFormulaireCreateur(id) {
       el("label", {}, "Autres noms ou orthographes", autres),
       champVraiNom,
       el("label", {}, "Lieu (quartier ou ville)", choixLieu,
-        el("span", { class: "aide", text: "Un lieu qui manque pourra être ajouté depuis la carte (étape 3c)." })),
+        el("span", { class: "aide", text: "Vide = « Lieu inconnu » sur la carte (sauf pour un membre d'un crew)." })),
+      el("div", { class: "ligne-boutons" }, nouveauLieu),
       el("div", { class: "formulaire" }, el("span", { class: "aide", text: "Époques (une ou plusieurs)" }), pilulesEpoques),
       el("label", {}, "Année de début (facultatif)", annee),
       el("label", {}, "Histoire", histoire),
@@ -505,9 +501,10 @@ async function retirerMembre(m) {
 }
 
 // ---------- Photo de profil ----------
+const COTE_MAX_SOURCE = 2400;   // la photo d'origine est d'abord ramenée à 2400 px au plus (cadrage fluide, mémoire)
 
-// Ouvre la photo choisie (HEIC compris sur iPhone), la recadre en carré au centre et la réduit à 400 × 400 en JPEG
-async function reduirePhoto(fichier) {
+// Ouvre la photo choisie (HEIC compris sur iPhone) et la ramène à 2400 px au plus sur son grand côté
+async function ouvrirImage(fichier) {
   let image;
   if (window.createImageBitmap) {
     try { image = await createImageBitmap(fichier); } catch (e) { /* on essaie autrement */ }
@@ -516,15 +513,87 @@ async function reduirePhoto(fichier) {
     const url = URL.createObjectURL(fichier);
     try { image = new Image(); image.src = url; await image.decode(); } finally { URL.revokeObjectURL(url); }
   }
-  const largeur = image.width, hauteur = image.height;
-  const cote = Math.min(largeur, hauteur);
-  const canvas = document.createElement("canvas");
-  canvas.width = COTE_PHOTO; canvas.height = COTE_PHOTO;
-  canvas.getContext("2d").drawImage(image, (largeur - cote) / 2, (hauteur - cote) / 2, cote, cote, 0, 0, COTE_PHOTO, COTE_PHOTO);
+  const grand = Math.max(image.width, image.height);
+  if (grand <= COTE_MAX_SOURCE) return image;
+  const r = COTE_MAX_SOURCE / grand;
+  const reduite = document.createElement("canvas");
+  reduite.width = Math.round(image.width * r);
+  reduite.height = Math.round(image.height * r);
+  reduite.getContext("2d").drawImage(image, 0, 0, reduite.width, reduite.height);
   if (image.close) image.close();
-  const blob = await new Promise((ok) => canvas.toBlob(ok, "image/jpeg", QUALITE_PHOTO));
-  if (!blob) throw new Error("réduction impossible");
-  return blob;
+  return reduite;
+}
+
+// Cadre rond réglable : glisser un doigt pour déplacer, curseur pour zoomer (×1 à ×4).
+// Le cadre reste toujours rempli. cadre.exporter() renvoie le carré visible, en JPEG 400 × 400.
+function creerCadre(image, classe) {
+  const TAILLE = 260;   // taille du cadre à l'écran (px)
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  const canvas = el("canvas", { class: "cadre-photo " + classe, width: String(TAILLE * dpr), height: String(TAILLE * dpr),
+    "aria-label": "Cadrage de la photo : glisse pour déplacer" });
+  const ctx = canvas.getContext("2d");
+  const largeur = image.width, hauteur = image.height;
+  const echelleMin = TAILLE / Math.min(largeur, hauteur);   // zoom ×1 : le petit côté remplit le cadre
+  let echelle = echelleMin;
+  let x = (TAILLE - largeur * echelle) / 2;   // position du coin haut-gauche de la photo dans le cadre
+  let y = (TAILLE - hauteur * echelle) / 2;
+
+  function borner() {
+    x = Math.min(0, Math.max(TAILLE - largeur * echelle, x));
+    y = Math.min(0, Math.max(TAILLE - hauteur * echelle, y));
+  }
+  function dessiner() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, TAILLE, TAILLE);
+    ctx.drawImage(image, x, y, largeur * echelle, hauteur * echelle);
+  }
+
+  // Glisser (doigt ou souris)
+  let depart = null;
+  canvas.addEventListener("pointerdown", (e) => {
+    depart = { px: e.clientX, py: e.clientY, x, y, id: e.pointerId };
+    canvas.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  canvas.addEventListener("pointermove", (e) => {
+    if (!depart || e.pointerId !== depart.id) return;
+    x = depart.x + (e.clientX - depart.px);
+    y = depart.y + (e.clientY - depart.py);
+    borner();
+    dessiner();
+  });
+  const finir = (e) => { if (depart && e.pointerId === depart.id) depart = null; };
+  canvas.addEventListener("pointerup", finir);
+  canvas.addEventListener("pointercancel", finir);
+
+  // Zoom autour du centre du cadre
+  const curseur = el("input", { type: "range", min: "1", max: "4", step: "0.01", value: "1", "aria-label": "Zoom" });
+  curseur.addEventListener("input", () => {
+    const cx = (TAILLE / 2 - x) / echelle, cy = (TAILLE / 2 - y) / echelle;   // point de la photo au centre du cadre
+    echelle = echelleMin * Number(curseur.value);
+    x = TAILLE / 2 - cx * echelle;
+    y = TAILLE / 2 - cy * echelle;
+    borner();
+    dessiner();
+  });
+
+  dessiner();
+  return {
+    element: el("div", { class: "cadre" }, canvas,
+      el("label", { class: "zoom" }, el("span", { text: "−" }), curseur, el("span", { text: "+" })),
+      el("p", { class: "petit centre", text: "Glisse la photo pour la placer dans le rond, zoome avec le curseur." })),
+    // Carré visible, en pixels de la photo, réduit à 400 × 400
+    async exporter() {
+      const sortie = document.createElement("canvas");
+      sortie.width = COTE_PHOTO; sortie.height = COTE_PHOTO;
+      const cote = TAILLE / echelle;
+      sortie.getContext("2d").drawImage(image, -x / echelle, -y / echelle, cote, cote, 0, 0, COTE_PHOTO, COTE_PHOTO);
+      const blob = await new Promise((ok) => sortie.toBlob(ok, "image/jpeg", QUALITE_PHOTO));
+      if (!blob) throw new Error("réduction impossible");
+      return blob;
+    },
+    liberer() { if (image.close) image.close(); },
+  };
 }
 
 function ouvrirPhoto(id) {
@@ -532,12 +601,13 @@ function ouvrirPhoto(id) {
   if (!cr || !App.estEditrice()) return;
 
   App.ouvrirFeuille((c) => {
-    let nouvelle = null;          // photo réduite, pas encore envoyée
-    let urlApercu = null;
+    let cadre = null;   // photo choisie, pas encore envoyée
     const classe = ETIQUETTES[cr.etiquette] ? cr.etiquette : "inconnu";
+    const zonePhoto = el("div", { class: "zone-photo" });
     const apercu = el("span", { class: "avatar-rond apercu " + classe });
     const urlActuelle = App.urlPhoto(cr);
     apercu.append(urlActuelle ? el("img", { src: urlActuelle, alt: "Photo actuelle" }) : silhouette(120));
+    zonePhoto.append(apercu);
 
     const info = el("p", { class: "petit centre", text: cr.photo_chemin ? "Photo actuelle" : "Pas encore de photo" });
     const entree = el("input", { type: "file", accept: "image/*", class: "fichier-cache" });
@@ -548,7 +618,7 @@ function ouvrirPhoto(id) {
 
     function majBouton() {
       const creditChange = (credit.value.trim() || null) !== (cr.photo_credit || null);
-      enregistrer.disabled = !nouvelle && !(cr.photo_chemin && creditChange);
+      enregistrer.disabled = !cadre && !(cr.photo_chemin && creditChange);
     }
     credit.addEventListener("input", majBouton);
     majBouton();
@@ -558,20 +628,19 @@ function ouvrirPhoto(id) {
       entree.value = "";   // permet de rechoisir la même photo
       if (!fichier) return;
       zoneErreur.textContent = "";
-      info.textContent = "Préparation de la photo…";
+      info.textContent = "Ouverture de la photo…";
+      let image;
       try {
-        nouvelle = await reduirePhoto(fichier);
+        image = await ouvrirImage(fichier);
       } catch (e) {
-        nouvelle = null;
         info.textContent = "";
         zoneErreur.textContent = "Impossible d'ouvrir cette photo. Essaie avec une autre.";
-        majBouton();
         return;
       }
-      if (urlApercu) URL.revokeObjectURL(urlApercu);
-      urlApercu = URL.createObjectURL(nouvelle);
-      apercu.replaceChildren(el("img", { src: urlApercu, alt: "Nouvelle photo" }));
-      info.textContent = "Nouvelle photo prête (" + Math.round(nouvelle.size / 1024) + " Ko) : pas encore envoyée";
+      if (cadre) cadre.liberer();
+      cadre = creerCadre(image, classe);
+      zonePhoto.replaceChildren(cadre.element);
+      info.textContent = "Nouvelle photo : pas encore envoyée";
       majBouton();
     });
 
@@ -580,17 +649,18 @@ function ouvrirPhoto(id) {
       enregistrer.disabled = true;
       const chemin = "createurs/" + cr.id + ".jpg";
       try {
-        if (nouvelle) {
+        if (cadre) {
+          const blob = await cadre.exporter();
           // upsert : remplace l'ancienne photo au même endroit. Cache court : les autres téléphones voient vite la nouvelle.
-          const { error } = await App.client.storage.from("photos").upload(chemin, nouvelle, { contentType: "image/jpeg", upsert: true, cacheControl: "60" });
+          const { error } = await App.client.storage.from("photos").upload(chemin, blob, { contentType: "image/jpeg", upsert: true, cacheControl: "60" });
           if (error) throw error;
         }
         const { data, error } = await App.client.from("createurs")
-          .update({ photo_chemin: nouvelle ? chemin : cr.photo_chemin, photo_credit: credit.value.trim() || null })
+          .update({ photo_chemin: cadre ? chemin : cr.photo_chemin, photo_credit: credit.value.trim() || null })
           .eq("id", cr.id).select("id");
         if (error) throw error;
         if (!data.length) throw new Error("Ce créateur n'existe plus.");
-        if (urlApercu) URL.revokeObjectURL(urlApercu);
+        if (cadre) cadre.liberer();
         await App.chargerTout();
         App.fermerFeuille();
         message("Photo enregistrée");
@@ -603,7 +673,7 @@ function ouvrirPhoto(id) {
 
     c.append(el("div", { class: "feuille-haut" }, App.boutonRetour("Annuler")),
       el("h1", { text: "Photo de " + cr.nom }),
-      apercu, info,
+      zonePhoto, info,
       el("div", { class: "ligne-boutons centre" }, choisir),
       el("label", {}, "Auteur de la photo (facultatif)", credit, el("span", { class: "aide", text: "Affiché en tout petit sous la photo : « Photo : … »" })),
       zoneErreur,

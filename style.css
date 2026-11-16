@@ -200,3 +200,64 @@ button:disabled { opacity: 0.5; cursor: default; }
 .fichier-cache { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
 .bouton-fichier { position: relative; display: inline-flex; flex-direction: row; align-items: center; justify-content: center;
   font-size: 16px; color: var(--encre); background: var(--blanc); }
+
+/* ---------- Carte (étape 3c) ---------- */
+body.avec-carte { overflow: hidden; }
+body.avec-carte #contenu { padding: 0; }
+.zone-carte { position: fixed; left: 0; right: 0; top: 0; bottom: calc(var(--bas) + 64px); z-index: 0; background: #AAD3DF; }
+.carte-dessus { position: fixed; z-index: 10; left: 12px; right: 12px; top: calc(var(--haut) + 10px);
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none; }
+.carte-dessus > * { pointer-events: auto; }
+.carte-ligne { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mode-carte { width: 170px; background: var(--blanc); box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+.carte-ligne .pastille-profil { box-shadow: 0 2px 10px rgba(0,0,0,0.12); }
+.carte-filtres { flex-wrap: nowrap; overflow-x: auto; margin: 0; padding: 2px 0 4px; scrollbar-width: none; }
+.carte-filtres::-webkit-scrollbar { display: none; }
+.carte-filtres .filtre { flex-shrink: 0; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.carte-fil { align-self: flex-start; display: flex; }
+.carte-fil span, .carte-fil button { height: 32px; padding: 0 12px; border: none; border-radius: 16px; background: rgba(255,255,255,0.92);
+  font-size: 13px; font-weight: 600; display: flex; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.carte-aide { position: fixed; z-index: 10; left: 50%; transform: translateX(-50%); bottom: calc(var(--bas) + 96px); margin: 0;
+  padding: 8px 14px; border-radius: 18px; background: var(--blanc); font-size: 13px; color: var(--gris); white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1); pointer-events: none; }
+.carte-aide:empty { display: none; }
+.leaflet-container { font: inherit; }
+.leaflet-control-attribution { font-size: 11px; }
+
+/* Bulles */
+.bulle-ancre { background: transparent; border: none; }
+.bulle { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; height: 32px; padding: 0 4px 0 12px;
+  border: none; border-radius: 16px; background: var(--blanc); color: var(--encre); display: flex; align-items: center; gap: 8px;
+  font-weight: 700; font-size: 13px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+.bulle .nombre { min-width: 24px; height: 24px; padding: 0 6px; border-radius: 12px; background: var(--or);
+  display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; }
+.bulle.groupe { background: var(--encre); color: var(--blanc); }
+.bulle.groupe .nombre { color: var(--encre); }
+.bulle.inconnue { background: var(--sable); border: 2px dashed var(--gris); color: var(--gris); }
+.bulle.inconnue .nombre { background: var(--blanc); color: var(--encre); }
+
+/* Liste d'un lieu, en bas de la carte */
+.panneau-lieu { position: fixed; z-index: 20; left: 0; right: 0; bottom: calc(var(--bas) + 64px); max-height: 55vh; overflow-y: auto;
+  background: var(--sable); border-radius: 22px 22px 0 0; padding: 16px 20px 20px; box-shadow: 0 -4px 16px rgba(0,0,0,0.15);
+  display: flex; flex-direction: column; gap: 10px; }
+.panneau-haut { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.panneau-haut h2 { margin: 0; font-size: 22px; }
+.panneau-haut p { margin: 2px 0 0; }
+.panneau-lieu .bouton-secondaire { background: var(--blanc); }
+
+/* Lieux */
+.ligne.quartier { margin-left: 20px; width: calc(100% - 20px); }
+.ligne-recherche { display: flex; gap: 8px; }
+.ligne-recherche input { flex: 1; min-width: 0; }
+
+/* Cadrage de la photo */
+.zone-photo { display: flex; justify-content: center; }
+.cadre { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.cadre-photo { width: 260px; height: 260px; border-radius: 130px; border: 4px solid #CFC7B5; background: var(--beige);
+  touch-action: none; cursor: grab; box-sizing: content-box; }
+.cadre-photo.man { border-color: var(--vert); }
+.cadre-photo.gyal { border-color: var(--or); }
+.cadre-photo.mixte { border-color: var(--vert) var(--or) var(--or) var(--vert); }
+.zoom { flex-direction: row; align-items: center; gap: 10px; width: 260px; font-size: 20px; color: var(--encre); }
+.zoom input { flex: 1; accent-color: var(--vert); height: 32px; }
+.cadre p { margin: 0; }

@@ -217,7 +217,7 @@ App.chargerTout = async function () {
   const [steps, createurs, lieux, membres] = await Promise.all([
     toutLire("steps", "*", "id"),
     toutLire("createurs", "*", "id"),
-    toutLire("lieux", "id, type, nom, ville_id", "id"),
+    toutLire("lieux", "id, type, nom, ville_id, latitude, longitude, modifie_le", "id"),
     toutLire("membres_crew", "crew_id, personne_id, fondateur, ancien"),
   ]);
   App.donnees.steps = steps;
@@ -298,6 +298,7 @@ App.dessinerBarre = function () {
 };
 
 App.redessiner = function () {
+  if (App.quandOnQuitte) { App.quandOnQuitte(); App.quandOnQuitte = null; }   // ex. la carte se démonte
   const contenu = document.getElementById("contenu");
   contenu.replaceChildren();
   document.querySelectorAll(".bouton-hasard").forEach((b) => b.remove());
@@ -334,7 +335,7 @@ function ongletBientot(texte) {
   return (contenu) => contenu.append(App.entete(texte.titre), el("div", { class: "bientot", text: texte.message }));
 }
 App.enregistrerOnglet("steps", { titre: "Steps", icone: ICONES.steps, dessiner: () => {} });   // remplacé par steps.js
-App.enregistrerOnglet("carte", { titre: "Carte", icone: ICONES.carte, dessiner: () => {} });   // remplacé par createurs.js
+App.enregistrerOnglet("carte", { titre: "Carte", icone: ICONES.carte, dessiner: () => {} });   // remplacé par carte.js
 App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.estEditrice(),
   dessiner: ongletBientot({ titre: "Cours", message: "Tes cours arrivent à l'étape 3d." }) });
 App.enregistrerOnglet("savoir", { titre: "Savoir", icone: ICONES.savoir,
@@ -367,6 +368,8 @@ App.entrer = async function () {
 App.deconnecter = async function () {
   App.fermerToutesLesFeuilles();
   await App.client.auth.signOut({ scope: "local" });   // ce téléphone seulement
+  if (App.quandOnQuitte) { App.quandOnQuitte(); App.quandOnQuitte = null; }
+  document.getElementById("contenu").replaceChildren();
   App.profil = null;
   App.email = "";
   App.donnees = donneesVides();
