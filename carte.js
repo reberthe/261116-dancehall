@@ -12,6 +12,10 @@ const DELAI_NOMINATIM = 1500;              // ms entre deux recherches (règle N
 const EST_IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
 let carteLeaflet = null;
+// Rose des vents du titre JAMAÏQUE (dessin fixe)
+const ROSE_DES_VENTS = '<svg width="44" height="44" viewBox="0 0 44 44"><circle cx="22" cy="22" r="20" fill="rgba(255,255,255,0.5)" stroke="#1E1E1C" stroke-width="1.4"/>' +
+  '<path d="M22 6 L27 22 L22 38 L17 22 Z" fill="#1E1E1C"/><path d="M22 6 L27 22 L17 22 Z" fill="#E2B84A"/>' +
+  '<text x="22" y="4.5" text-anchor="middle" font-family="sans-serif" font-weight="800" font-size="7" fill="#1E1E1C">N</text></svg>';
 let derniereRechercheNominatim = 0;
 
 // ---------- Qui est sur la carte ----------
@@ -47,14 +51,15 @@ function dessinerOngletCarte(contenu) {
   const mode = lireLocal("mode_carte", "carte");
   if (mode === "liste") dessinerListeCreateurs(contenu, boutonsMode("liste"));
   else if (typeof L === "undefined") {   // Leaflet pas chargé (pas de réseau au démarrage, site bloqué…)
-    contenu.append(App.entete("Carte"), el("div", { class: "bandeau" }, boutonsMode("carte")),
+    contenu.append(App.entete(enteteJamaique()), el("div", { class: "bandeau" }, boutonsMode("carte", true)),
       el("div", { class: "bientot", text: "La carte n'a pas pu se charger. Passe en « Liste », ou relance l'appli avec du réseau." }));
   } else dessinerCarteJamaique(contenu);
 }
 
-function boutonsMode(actif) {
+// seul : choix posé seul (liste, carte pas chargée) ; sinon il est dans la barre blanche de la carte
+function boutonsMode(actif, seul = true) {
   const changer = (mode) => { ecrireLocal("mode_carte", mode); App.redessiner(); window.scrollTo(0, 0); };
-  return el("div", { class: "segments deux mode-carte", role: "group", "aria-label": "Carte ou liste" },
+  return el("div", { class: "segments deux mode-carte" + (seul ? "" : " dans-barre"), role: "group", "aria-label": "Carte ou liste" },
     el("button", { type: "button", "aria-pressed": actif === "carte" ? "true" : "false", onclick: () => changer("carte") }, "Carte"),
     el("button", { type: "button", "aria-pressed": actif === "liste" ? "true" : "false", onclick: () => changer("liste") }, "Liste"));
 }
@@ -71,13 +76,29 @@ function dessinerCarteJamaique(contenu) {
   const panneau = el("div", { class: "panneau-lieu", role: "dialog", "aria-label": "Créateurs du lieu", hidden: true });
   contenu.append(zone, dessus, aide, panneau);
 
-  // Haut : Carte | Liste, lieux (Emma et Jade), profil ; puis les filtres ; puis le fil
-  dessus.append(el("div", { class: "carte-ligne" },
-    boutonsMode("carte"),
+  // Haut : barre blanche (Carte | Liste, Filtres, Lieux pour Emma et Jade, profil) ; les filtres s'ouvrent dessous ;
+  // puis le gros titre JAMAÏQUE (toute l'île) ou le fil « ‹ Jamaïque » (zoom)
+  const nombreFiltres = el("span", { class: "pastille-nombre", "aria-hidden": "true" });
+  const boutonFiltres = el("button", { type: "button", class: "bouton-filtres", "aria-expanded": "false", "aria-controls": "carte-filtres" },
+    icone("M4 6h16M7 12h10M10 18h4", 20, 2.2), nombreFiltres);
+  dessus.append(el("div", { class: "carte-barre" },
+    boutonsMode("carte", false),
     el("div", { class: "entete-actions" },
+      boutonFiltres,
       App.peutEcrire() ? el("button", { type: "button", class: "pastille-profil", onclick: ouvrirListeLieux }, "Lieux") : null,
-      el("button", { type: "button", class: "pastille-profil", onclick: App.menuProfil, "aria-label": "Profil et déconnexion" }, App.profil.prenom))));
-  const filtres = el("div", { class: "filtres carte-filtres", role: "group", "aria-label": "Filtres" });
+      el("button", { type: "button", class: "pastille-profil moi", onclick: App.menuProfil, "aria-label": "Profil et déconnexion" }, App.profil.prenom))));
+  const filtres = el("div", { class: "filtres carte-filtres", id: "carte-filtres", role: "group", "aria-label": "Filtres", hidden: true });
+  boutonFiltres.addEventListener("click", () => {
+    filtres.hidden = !filtres.hidden;
+    boutonFiltres.setAttribute("aria-expanded", filtres.hidden ? "false" : "true");
+  });
+  function majNombreFiltres() {
+    const n = filtresCreateurs.epoques.length + filtresCreateurs.etiquettes.length + filtresCreateurs.types.length;
+    nombreFiltres.textContent = n ? String(n) : "";
+    nombreFiltres.hidden = !n;
+    boutonFiltres.setAttribute("aria-label", n ? "Filtres, " + n + " choisi" + (n > 1 ? "s" : "") : "Filtres");
+  }
+  majNombreFiltres();
   const basculerDans = (liste, valeur) => { const i = liste.indexOf(valeur); if (i >= 0) liste.splice(i, 1); else liste.push(valeur); };
   const pilule = (texte, liste, valeur) => {
     const b = el("button", { type: "button", class: "filtre", "aria-pressed": liste.includes(valeur) ? "true" : "false" }, texte);
@@ -85,6 +106,7 @@ function dessinerCarteJamaique(contenu) {
       basculerDans(liste, valeur);
       b.setAttribute("aria-pressed", liste.includes(valeur) ? "true" : "false");
       sauverFiltresCreateurs();
+      majNombreFiltres();
       fermerPanneau();
       dessinerBulles();
     });
@@ -93,7 +115,15 @@ function dessinerCarteJamaique(contenu) {
   for (const [cle, nom] of Object.entries(EPOQUES)) filtres.append(pilule(nom, filtresCreateurs.epoques, cle));
   for (const cle of ["gyal", "man", "mixte"]) filtres.append(pilule(ETIQUETTES[cle].nom, filtresCreateurs.etiquettes, cle));
   for (const [cle, nom] of Object.entries(TYPES)) filtres.append(pilule(nom, filtresCreateurs.types, cle));
-  dessus.append(filtres, fil);
+  // Gros titre posé sur la mer : coordonnées, petite bande du drapeau, rose des vents
+  const compteIle = el("span", { class: "cartouche-compte" });
+  const rose = el("span", { class: "rose-vents", "aria-hidden": "true" });
+  rose.innerHTML = ROSE_DES_VENTS;   // dessin fixe
+  const cartouche = el("div", { class: "cartouche" },
+    el("h2", { class: "cartouche-titre", text: "JAMAÏQUE" }),
+    el("span", { class: "cartouche-coord" }, "18° N · 77° O", tricolore()),
+    compteIle, rose);
+  dessus.append(filtres, cartouche, fil);
 
   // Carte Leaflet (fond OpenStreetMap ; jamais gardé hors connexion)
   const carte = L.map(zone, { zoomControl: false, tapHold: EST_IOS });
@@ -181,7 +211,11 @@ function dessinerCarteJamaique(contenu) {
           else carte.flyTo([b.lat, b.lon], ZOOM_VILLE);
         });
       }
-      fil.append(el("span", { text: "Jamaïque · " + pluriel(total, "créateur") }));
+      cartouche.hidden = false;
+      fil.hidden = true;
+      const noms = [...filtresCreateurs.epoques.map((e) => EPOQUES[e]), ...filtresCreateurs.etiquettes.map((e) => ETIQUETTES[e].nom),
+        ...filtresCreateurs.types.map((t) => TYPES[t])];
+      compteIle.textContent = [pluriel(total, "créateur"), ...noms].join(" · ");
       aide.textContent = total ? "Touche une ville pour voir ses quartiers" : "";
     } else {
       // Niveau 2 : les quartiers, et « (sans quartier) » au centre de chaque ville
@@ -206,6 +240,9 @@ function dessinerCarteJamaique(contenu) {
           }
         });
       }
+      // Zoom : le gros titre disparaît, il reste le fil pour revenir à toute l'île
+      cartouche.hidden = true;
+      fil.hidden = false;
       fil.append(el("button", { type: "button", onclick: () => { fermerPanneau(); carte.flyToBounds(JAMAIQUE); } }, "‹ Jamaïque"));
       aide.textContent = "";
     }

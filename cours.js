@@ -9,6 +9,7 @@ const formatJourCourt = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", week
 const formatJourLong = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" });
 const formatMois = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", month: "long", year: "numeric" });
 const formatJourSemaine = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", weekday: "short" });
+const formatMoisCourt = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", month: "short" });
 const formatAujourdhui = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" });   // AAAA-MM-JJ
 
 const versDate = (jour) => new Date(jour + "T12:00:00Z");   // midi UTC : jamais de décalage d'un jour
@@ -50,14 +51,14 @@ function coursFiltres() {
 
 // ---------- Liste ----------
 function dessinerCours(contenu) {
-  contenu.append(App.entete("Cours",
+  contenu.append(App.entete({ titre: "Cours", surtitre: "Mes sessions",
+    sous: el("span", { class: "sous-entete" }, icone(ICONES.cadenas, 13, 2.4), "Visibles par toi seule") },
     App.peutEcrire() ? el("button", { type: "button", class: "bouton-rond", "aria-label": "Noter un cours", onclick: () => ouvrirFormulaireCours(null) }, icone(ICONES.plus, 22, 2.6)) : null));
 
   const champ = el("input", { type: "search", placeholder: "Un prof, une salle, un step…", "aria-label": "Rechercher un cours",
     value: rechercheCours, autocomplete: "off" });
   champ.addEventListener("input", () => { rechercheCours = champ.value; dessinerListe(); });
   contenu.append(el("label", { class: "champ-recherche" }, icone(ICONES.loupe, 18), champ));
-  contenu.append(el("p", { class: "petit bandeau" }, icone(ICONES.cadenas, 13, 2.4), " Tes cours ne sont visibles que par toi."));
 
   const liste = el("div", { class: "liste" });
   contenu.append(liste);
@@ -72,19 +73,32 @@ function dessinerCours(contenu) {
       const mois = c.jour.slice(0, 7);
       if (mois !== moisCourant) {
         moisCourant = mois;
-        liste.append(el("h2", { class: "titre-section", text: majuscule(formatMois.format(versDate(c.jour))) }));
+        liste.append(el("h2", { class: "titre-filet", text: majuscule(formatMois.format(versDate(c.jour))) }));
       }
-      const n = stepsDuCours(c.id).length;
-      liste.append(el("button", { type: "button", class: "ligne", onclick: () => ouvrirFicheCours(c.id) },
-        el("span", { class: "date-cours", "aria-hidden": "true" },
-          el("span", { class: "date-jour", text: String(Number(c.jour.slice(8, 10))) }),
-          el("span", { class: "date-semaine", text: formatJourSemaine.format(versDate(c.jour)).replace(".", "") })),
-        el("span", { class: "ligne-texte" },
-          el("span", { class: "ligne-titre", text: nomProf(c) || "Cours du " + jourCourt(c.jour) }),
-          el("span", { class: "ligne-sous", text: [c.salle, pluriel(n, "step")].filter(Boolean).join(" · ") }))));
+      liste.append(ticketCours(c));
     }
   }
   dessinerListe();
+}
+
+// Un cours = un ticket : talon avec la date (bande vert-or-noir sur le bord, comme un bracelet de soirée),
+// puis le prof, la salle et les steps vus (3 au plus, puis « + 2 »)
+function ticketCours(c) {
+  const date = versDate(c.jour);
+  const vus = stepsDuCours(c.id);
+  const montres = vus.slice(0, 3).map((x) => el("span", { class: "puce", text: x.nom }));
+  if (vus.length > 3) montres.push(el("span", { class: "puce", text: "+ " + (vus.length - 3) }));
+  return el("button", { type: "button", class: "ticket", onclick: () => ouvrirFicheCours(c.id),
+    "aria-label": [jourLong(c.jour), nomProf(c), c.salle, pluriel(vus.length, "step")].filter(Boolean).join(", ") },
+    el("span", { class: "talon", "aria-hidden": "true" },
+      el("span", { class: "talon-semaine", text: formatJourSemaine.format(date).replace(".", "") }),
+      el("span", { class: "talon-jour", text: String(Number(c.jour.slice(8, 10))) }),
+      el("span", { class: "talon-mois", text: formatMoisCourt.format(date).replace(".", "") })),
+    el("span", { class: "trous", "aria-hidden": "true" }),
+    el("span", { class: "ticket-corps", "aria-hidden": "true" },
+      el("span", { class: "ticket-prof", text: nomProf(c) || "Cours du " + jourCourt(c.jour) }),
+      c.salle ? el("span", { class: "ticket-salle", text: c.salle }) : null,
+      montres.length ? el("span", { class: "puces petites" }, montres) : el("span", { class: "ticket-salle", text: "Pas de step noté" })));
 }
 
 App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.estEditrice(), dessiner: dessinerCours });

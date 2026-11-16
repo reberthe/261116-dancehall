@@ -83,12 +83,13 @@ function silhouette(taille) {
   return svg;
 }
 
-// Petite photo des listes (avec la lettre M / G / X dans le coin) ; sans photo : la lettre seule
-function avatar(c) {
+// Petite photo des listes (avec la lettre M / F / X dans le coin) ; sans photo : la lettre seule
+// options.petit : mini-photo (lignes A → Z des steps) ; sans photo, rien du tout
+function avatar(c, options = {}) {
   const url = App.urlPhoto(c);
-  const sansPhoto = () => lettre(c.etiquette, { carre: c.type === "personne" });
-  if (!url) return sansPhoto();
-  const bloc = el("span", { class: "avatar " + (ETIQUETTES[c.etiquette] ? c.etiquette : "inconnu") });
+  const sansPhoto = () => options.petit ? document.createTextNode("") : lettre(c.etiquette, { carre: c.type === "personne" });
+  if (!url) return options.petit ? null : sansPhoto();
+  const bloc = el("span", { class: "avatar " + (ETIQUETTES[c.etiquette] ? c.etiquette : "inconnu") + (options.petit ? " petit" : "") });
   const img = el("img", { src: url, alt: "", decoding: "async" });
   img.addEventListener("error", () => bloc.replaceWith(sansPhoto()));   // lien expiré ou pas de réseau
   const mini = lettre(c.etiquette);
@@ -134,6 +135,10 @@ function ligneCreateur(c, sousTitre, quandOnTouche) {
 }
 
 // ---------- Onglet Carte : liste des créateurs ----------
+// En-tête du mode Liste : le même titre que sur la carte
+function enteteJamaique() {
+  return { titre: "Jamaïque", sous: el("span", { class: "sous-entete cartouche-coord" }, "18° N · 77° O", tricolore()) };
+}
 function createursFiltres() {
   const mots = sansAccents(filtresCreateurs.recherche).split(/\s+/).filter(Boolean);
   return App.donnees.createurs.filter((c) => {
@@ -153,7 +158,7 @@ function dessinerListeCreateurs(contenu, boutonsMode) {
   const actions = App.peutEcrire()
     ? [el("button", { type: "button", class: "bouton-rond", "aria-label": "Ajouter un créateur", onclick: () => ouvrirFormulaireCreateur(null) }, icone(ICONES.plus, 22, 2.6))]
     : [];
-  contenu.append(App.entete("Carte", ...actions));
+  contenu.append(App.entete(enteteJamaique(), ...actions));
   contenu.append(el("div", { class: "bandeau" }, boutonsMode));
 
   const champ = el("input", { type: "search", placeholder: "Un crew, une personne, un lieu…", "aria-label": "Rechercher un créateur",

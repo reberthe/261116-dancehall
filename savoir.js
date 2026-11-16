@@ -1,9 +1,8 @@
-// savoir.js — onglet Savoir : lexique (cartes) et histoire (fiches par époque, avec les créateurs concernés)
+// savoir.js — onglet Savoir : lexique (en dictionnaire, avec un A-Z) et histoire (frise des époques, avec les créateurs concernés)
 "use strict";
 
 let rechercheLexique = "";
 let rechercheHistoire = "";
-const filtresHistoire = Object.assign({ epoques: [] }, lireLocal("filtres_histoire", {}));
 
 // ---------- Onglet ----------
 function dessinerSavoir(contenu) {
@@ -12,11 +11,11 @@ function dessinerSavoir(contenu) {
     ? [el("button", { type: "button", class: "bouton-rond", "aria-label": mode === "lexique" ? "Ajouter un terme" : "Ajouter une fiche d'histoire",
         onclick: () => (mode === "lexique" ? ouvrirFormulaireTerme(null) : ouvrirFormulaireHistoire(null)) }, icone(ICONES.plus, 22, 2.6))]
     : [];
-  contenu.append(App.entete("Savoir", ...ajouter));
+  contenu.append(App.decor("drapeau"), App.entete({ titre: "Savoir", surtitre: "Patois · Histoire" }, ...ajouter));
   const changer = (m) => { ecrireLocal("mode_savoir", m); App.redessiner(); window.scrollTo(0, 0); };
-  contenu.append(el("div", { class: "bandeau" }, el("div", { class: "segments deux mode-carte", role: "group", "aria-label": "Lexique ou histoire" },
+  contenu.append(el("div", { class: "segments deux choix-rubrique", role: "group", "aria-label": "Lexique ou histoire" },
     el("button", { type: "button", "aria-pressed": mode === "lexique" ? "true" : "false", onclick: () => changer("lexique") }, "Lexique"),
-    el("button", { type: "button", "aria-pressed": mode === "histoire" ? "true" : "false", onclick: () => changer("histoire") }, "Histoire"))));
+    el("button", { type: "button", "aria-pressed": mode === "histoire" ? "true" : "false", onclick: () => changer("histoire") }, "Histoire")));
   if (mode === "lexique") dessinerLexique(contenu); else dessinerHistoire(contenu);
 }
 
@@ -30,43 +29,102 @@ function termesFiltres() {
     .sort((a, b) => a.terme.localeCompare(b.terme, "fr"));
 }
 
+// Lettre d'un terme pour le dictionnaire (sans accent ; « # » pour un chiffre ou un signe)
+const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+function lettreDe(terme) {
+  const l = sansAccents(terme).trim().charAt(0).toUpperCase();
+  return ALPHABET.includes(l) ? l : "#";
+}
+
 function dessinerLexique(contenu) {
   const champ = el("input", { type: "search", placeholder: "Un terme, un mot de la définition…", "aria-label": "Rechercher un terme",
     value: rechercheLexique, autocomplete: "off" });
   champ.addEventListener("input", () => { rechercheLexique = champ.value; dessinerListe(); });
   contenu.append(el("label", { class: "champ-recherche" }, icone(ICONES.loupe, 18), champ));
   const compte = el("p", { class: "compte" });
-  const liste = el("div", { class: "liste" });
-  contenu.append(compte, liste);
+  const liste = el("div", { class: "dico" });
+  const rail = el("div", { class: "rail-az", role: "navigation", "aria-label": "Aller à une lettre" });
+  contenu.append(compte, liste, rail);
+
+  // A-Z : toucher une lettre, ou glisser le doigt dessus, saute à cette lettre
+  let titres = [];   // titres des lettres affichées, dans l'ordre
+  function sauterA(cible) {
+    const span = cible && cible.closest ? cible.closest("span[data-lettre]") : null;
+    if (!span || !span.classList.contains("presente")) return;
+    const titre = titres.find((t) => t.dataset.lettre === span.dataset.lettre);
+    if (titre) {
+      titre.scrollIntoView({ block: "start" });
+      marquerLettre(span.dataset.lettre);
+      sautA = Date.now();   // en bas de la liste, la lettre ne monte pas tout en haut : on garde celle qu'on a touchée
+    }
+  }
+  let sautA = 0;
+  rail.addEventListener("pointerdown", (e) => { rail.setPointerCapture(e.pointerId); sauterA(e.target); });
+  rail.addEventListener("pointermove", (e) => { if (e.buttons || e.pointerType === "touch") sauterA(document.elementFromPoint(e.clientX, e.clientY)); });
+  rail.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); sauterA(e.target); } });
+
+  function marquerLettre(l) {
+    rail.querySelectorAll("span").forEach((x) => x.classList.toggle("active", x.dataset.lettre === l));
+  }
+  // En faisant défiler, la lettre en haut de l'écran s'allume dans l'A-Z
+  let enAttente = false;
+  function suivreDefilement() {
+    if (enAttente || Date.now() - sautA < 600) return;
+    enAttente = true;
+    requestAnimationFrame(() => {
+      enAttente = false;
+      let courante = titres.length ? titres[0].dataset.lettre : null;
+      for (const t of titres) if (t.getBoundingClientRect().top <= 90) courante = t.dataset.lettre;
+      marquerLettre(courante);
+    });
+  }
+  window.addEventListener("scroll", suivreDefilement, { passive: true });
+  App.quandOnQuitte = () => window.removeEventListener("scroll", suivreDefilement);
 
   function dessinerListe() {
     const termes = termesFiltres();
     compte.textContent = pluriel(termes.length, "terme");
     liste.replaceChildren();
+    titres = [];
     if (!App.donnees.lexique.length) {
       liste.append(el("div", { class: "vide", text: App.peutEcrire() ? "Pas encore de terme. Touche + pour ajouter le premier." : "Pas encore de terme." }));
-      return;
+    } else if (!termes.length) liste.append(el("div", { class: "vide", text: "Aucun terme ne correspond." }));
+    let lettreCourante = null;
+    for (const t of termes) {
+      const l = lettreDe(t.terme);
+      if (l !== lettreCourante) {
+        lettreCourante = l;
+        const titre = el("h2", { class: "titre-filet lettre-dico", "data-lettre": l, text: l });
+        titres.push(titre);
+        liste.append(titre);
+      }
+      liste.append(entreeTerme(t));
     }
-    if (!termes.length) liste.append(el("div", { class: "vide", text: "Aucun terme ne correspond." }));
-    for (const t of termes) liste.append(carteTerme(t));
+    const presentes = new Set(titres.map((t) => t.dataset.lettre));
+    rail.replaceChildren(...[...ALPHABET, "#"].filter((l) => l !== "#" || presentes.has("#")).map((l) =>
+      el("span", { "data-lettre": l, class: presentes.has(l) ? "presente" : null, tabindex: presentes.has(l) ? "0" : null,
+        "aria-label": presentes.has(l) ? "Lettre " + l : null, "aria-hidden": presentes.has(l) ? null : "true", text: l })));
+    rail.hidden = titres.length < 2;
+    suivreDefilement();
   }
   dessinerListe();
 }
 
-// Carte complète d'un terme. Pour Emma et Jade, la toucher ouvre sa modification (sauf le lien).
-function carteTerme(t) {
-  const carte = el("div", { class: "carte-terme" + (App.peutEcrire() ? " modifiable" : "") },
+// Un terme du dictionnaire. Pour Emma et Jade, le toucher ouvre sa modification (sauf le lien).
+function entreeTerme(t) {
+  const bloc = el("div", { class: "terme" + (App.peutEcrire() ? " modifiable" : "") },
     el("h3", { text: t.terme }),
     el("p", { text: t.definition }),
-    t.exemple ? el("p", { class: "exemple", text: "Ex. : " + t.exemple }) : null,
+    t.exemple ? el("p", { class: "exemple", text: "« " + t.exemple + " »" }) : null,
     t.lien && LIEN_VALIDE.test(t.lien) ? el("a", { href: t.lien, target: "_blank", rel: "noopener noreferrer" }, icone(ICONES.lien, 15, 2.2), "Écouter un exemple") : null);
   if (App.peutEcrire()) {
-    carte.setAttribute("role", "button");
-    carte.setAttribute("tabindex", "0");
-    carte.setAttribute("aria-label", "Modifier " + t.terme);
-    carte.addEventListener("click", (e) => { if (!e.target.closest("a")) ouvrirFormulaireTerme(t.id); });
+    bloc.setAttribute("role", "button");
+    bloc.setAttribute("tabindex", "0");
+    bloc.setAttribute("aria-label", "Modifier " + t.terme);
+    bloc.addEventListener("click", (e) => { if (!e.target.closest("a")) ouvrirFormulaireTerme(t.id); });
+    bloc.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target === bloc) { e.preventDefault(); ouvrirFormulaireTerme(t.id); } });
   }
-  return carte;
+  return bloc;
 }
 
 function ouvrirFormulaireTerme(id) {
@@ -148,7 +206,6 @@ function rangEpoque(h) {
 function fichesFiltrees() {
   const mots = sansAccents(rechercheHistoire).split(/\s+/).filter(Boolean);
   return App.donnees.histoire.filter((h) => {
-    if (filtresHistoire.epoques.length && !(h.epoques || []).some((e) => filtresHistoire.epoques.includes(e))) return false;
     const texte = sansAccents([h.titre, h.texte, ...createursDeFiche(h.id).map((c) => c.nom)].join(" "));
     return mots.every((m) => texte.includes(m));
   }).sort((a, b) => rangEpoque(a) - rangEpoque(b) || a.titre.localeCompare(b.titre, "fr"));
@@ -159,20 +216,10 @@ function dessinerHistoire(contenu) {
     value: rechercheHistoire, autocomplete: "off" });
   champ.addEventListener("input", () => { rechercheHistoire = champ.value; dessinerListe(); });
   contenu.append(el("label", { class: "champ-recherche" }, icone(ICONES.loupe, 18), champ));
-  const filtres = el("div", { class: "filtres", role: "group", "aria-label": "Époques" });
-  for (const [cle, nom] of Object.entries(EPOQUES)) {
-    filtres.append(el("button", { type: "button", class: "filtre", "aria-pressed": filtresHistoire.epoques.includes(cle) ? "true" : "false",
-      onclick: () => {
-        const i = filtresHistoire.epoques.indexOf(cle);
-        if (i >= 0) filtresHistoire.epoques.splice(i, 1); else filtresHistoire.epoques.push(cle);
-        ecrireLocal("filtres_histoire", filtresHistoire);
-        App.redessiner();
-      } }, nom));
-  }
-  contenu.append(filtres);
-  const liste = el("div", { class: "liste" });
+  const liste = el("div", { class: "frise" });
   contenu.append(liste);
 
+  // Frise : une étape par époque (ligne verte, or puis noire), chaque fiche sous sa première époque
   function dessinerListe() {
     const fiches = fichesFiltrees();
     liste.replaceChildren();
@@ -182,16 +229,21 @@ function dessinerHistoire(contenu) {
     }
     if (!fiches.length) { liste.append(el("div", { class: "vide", text: "Aucune fiche ne correspond." })); return; }
     let rangCourant = -1;
+    let etape = null;
     for (const h of fiches) {
       const rang = rangEpoque(h);
       if (rang !== rangCourant) {
         rangCourant = rang;
-        liste.append(el("h2", { class: "titre-section", text: rang < ORDRE_EPOQUES.length ? EPOQUES[ORDRE_EPOQUES[rang]] : "Sans époque" }));
+        const cle = rang < ORDRE_EPOQUES.length ? ORDRE_EPOQUES[rang] : null;
+        etape = el("section", { class: "epoque " + (cle || "sans") },
+          el("h2", { class: "epoque-nom", text: cle ? EPOQUES[cle] : "Sans époque" }));
+        liste.append(etape);
       }
       const n = createursDeFiche(h.id).length;
-      liste.append(el("button", { type: "button", class: "ligne", onclick: () => ouvrirFicheHistoire(h.id) },
+      const autres = (h.epoques || []).filter((e) => e !== ORDRE_EPOQUES[rang]).map((e) => EPOQUES[e]);
+      etape.append(el("button", { type: "button", class: "ligne", onclick: () => ouvrirFicheHistoire(h.id) },
         el("span", { class: "ligne-texte" }, el("span", { class: "ligne-titre", text: h.titre }),
-          el("span", { class: "ligne-sous", text: [(h.epoques || []).map((e) => EPOQUES[e]).join(", ") || null, n ? pluriel(n, "créateur") : null].filter(Boolean).join(" · ") || "Fiche d'histoire" })),
+          el("span", { class: "ligne-sous", text: [autres.length ? "Aussi " + autres.join(", ") : null, n ? pluriel(n, "créateur") : null].filter(Boolean).join(" · ") || "Fiche d'histoire" })),
         icone(ICONES.chevron, 18, 2.4)));
     }
   }

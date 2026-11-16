@@ -54,42 +54,74 @@ function pastilleNiveau(niveau) {
 }
 
 // ---------- Liste ----------
+const EPOQUES_COURT = { old_school: "Old", middle_school: "Middle", new_school: "New" };
+let triSteps = lireLocal("tri_steps", "createur");   // « createur » ou « az », gardé sur le téléphone
+
+// Sous-titre d'un créateur en tête de groupe : Male · Black Roses Crew · 4 steps
+function sousTitreGroupe(c, n) {
+  const crews = c.type === "personne" ? crewsDe(c.id).filter((m) => !m.ancien).map((m) => m.crew.nom).join(", ") : "";
+  return [ETIQUETTES[c.etiquette] ? ETIQUETTES[c.etiquette].nom : null, c.type === "crew" ? "Crew" : null, crews || null, pluriel(n, "step")]
+    .filter(Boolean).join(" · ");
+}
+
+function ligneDeStep(s, avecCreateur) {
+  const p = App.estEditrice() ? App.donnees.perso.get(s.id) : null;
+  const sc = App.sousCategorie(s.sous_categorie);
+  const c = App.createur(s.createur_id);
+  const sous = avecCreateur ? sousTitreStep(s) : [s.epoque ? EPOQUES[s.epoque] : "Époque : ?", sc ? sc.nom : null].filter(Boolean).join(" · ");
+  const photo = avecCreateur && c ? avatar(c, { petit: true }) : null;
+  return el("button", { type: "button", class: "ligne", onclick: () => ouvrirFicheStep(s.id) },
+    lettre(s.etiquette, { petite: true }),
+    el("span", { class: "ligne-texte" }, el("span", { class: "ligne-titre", text: s.nom }), el("span", { class: "ligne-sous", text: sous })),
+    p && p.niveau ? pastilleNiveau(p.niveau) : null,
+    photo);
+}
+
 function dessinerSteps(contenu) {
   const actions = App.peutEcrire()
     ? [el("button", { type: "button", class: "bouton-rond", "aria-label": "Ajouter un step", onclick: () => ouvrirFormulaireStep(null) }, icone(ICONES.plus, 22, 2.6))]
     : [];
-  contenu.append(App.entete("Steps", ...actions));
+  contenu.append(App.decor("bandes"), App.entete({ titre: "Steps", surtitre: "Riddim · Dancehall", grand: true }, ...actions));
 
   const champ = el("input", { type: "search", placeholder: "Un step, un créateur, un mot…", "aria-label": "Rechercher un step",
     value: filtresSteps.recherche, autocomplete: "off" });
   champ.addEventListener("input", () => { filtresSteps.recherche = champ.value; dessinerListe(); });
   contenu.append(el("label", { class: "champ-recherche" }, icone(ICONES.loupe, 18), champ));
 
-  // Filtres : « À travailler » (Emma et Jade), puis une ligne pour les époques, une ligne pour female / male / neutre
-  const filtres = el("div", { class: "filtres-lignes", role: "group", "aria-label": "Filtres" });
-  const pilule = (texte, actif, basculer) => el("button", { type: "button", class: "filtre", "aria-pressed": actif ? "true" : "false",
+  // Filtres sur une ligne : À travailler (Emma et Jade) · Old · Middle · New · Female (+ Waistline) · Male · Neutre
+  const filtres = el("div", { class: "filtres defile", role: "group", "aria-label": "Filtres" });
+  const pilule = (texte, actif, basculer, classe = "") => el("button", { type: "button", class: "filtre " + classe, "aria-pressed": actif ? "true" : "false",
     onclick: () => { basculer(); sauverFiltres(); App.redessiner(); } }, texte);
   const basculerDans = (liste, valeur) => { const i = liste.indexOf(valeur); if (i >= 0) liste.splice(i, 1); else liste.push(valeur); };
-  if (App.estEditrice()) filtres.append(el("div", { class: "filtres" },
-    pilule("À travailler", filtresSteps.aTravailler, () => { filtresSteps.aTravailler = !filtresSteps.aTravailler; })));
-  filtres.append(el("div", { class: "filtres rang" }, Object.entries(EPOQUES).map(([cle, nom]) =>
-    pilule(nom, filtresSteps.epoques.includes(cle), () => basculerDans(filtresSteps.epoques, cle)))));
-  filtres.append(el("div", { class: "filtres rang" }, ["gyal", "man", "neutre"].map((cle) =>
-    pilule(ETIQUETTES[cle].nom, filtresSteps.etiquettes.includes(cle), () => {
+  if (App.estEditrice()) filtres.append(pilule("À travailler", filtresSteps.aTravailler, () => { filtresSteps.aTravailler = !filtresSteps.aTravailler; }));
+  for (const [cle, nom] of Object.entries(EPOQUES_COURT)) {
+    filtres.append(pilule(nom, filtresSteps.epoques.includes(cle), () => basculerDans(filtresSteps.epoques, cle)));
+  }
+  for (const cle of ["gyal", "man", "neutre"]) {
+    filtres.append(pilule(ETIQUETTES[cle].nom, filtresSteps.etiquettes.includes(cle), () => {
       basculerDans(filtresSteps.etiquettes, cle);
       filtresSteps.sousCategories = sousCategoriesActives();   // décocher Female enlève aussi Waistline
-    }))));
-  // Sous-catégories : seulement sous une étiquette choisie (ex. « Waistline technique » quand Female est choisi)
-  const sousCats = App.donnees.sousCategories.filter((sc) => filtresSteps.etiquettes.includes(sc.etiquette));
-  if (sousCats.length) filtres.append(el("div", { class: "filtres sous-filtres" }, sousCats.map((sc) =>
-    pilule(sc.nom, filtresSteps.sousCategories.includes(sc.cle), () => basculerDans(filtresSteps.sousCategories, sc.cle)))));
+    }));
+    // Sous-catégories juste après leur étiquette, seulement quand elle est choisie (ex. « Waistline technique » après Female)
+    if (filtresSteps.etiquettes.includes(cle)) {
+      for (const sc of App.donnees.sousCategories.filter((x) => x.etiquette === cle)) {
+        filtres.append(pilule(sc.nom, filtresSteps.sousCategories.includes(sc.cle), () => basculerDans(filtresSteps.sousCategories, sc.cle), "sous-filtre"));
+      }
+    }
+  }
   contenu.append(filtres);
 
+  // Nombre de steps + tri « Par créateur | A → Z »
   const compte = el("p", { class: "compte" });
+  const tri = el("div", { class: "tri", role: "group", "aria-label": "Trier" },
+    ...[["createur", "Par créateur"], ["az", "A → Z"]].map(([cle, nom]) => el("button", { type: "button", "aria-pressed": triSteps === cle ? "true" : "false",
+      onclick: () => { triSteps = cle; ecrireLocal("tri_steps", cle); App.redessiner(); } }, nom)));
+  contenu.append(el("div", { class: "ligne-tri" }, compte, tri));
   const liste = el("div", { class: "liste" });
-  contenu.append(compte, liste);
+  contenu.append(liste);
 
-  const hasard = el("button", { type: "button", class: "bouton-hasard" });
+  // Dé : bouton rond dans le coin
+  const hasard = el("button", { type: "button", class: "bouton-hasard" }, icone(ICONES.de, 24, 2.2));
   document.body.append(hasard);
 
   function dessinerListe() {
@@ -97,14 +129,35 @@ function dessinerSteps(contenu) {
     compte.textContent = steps.length + (steps.length > 1 ? " steps" : " step");
     liste.replaceChildren();
     if (!steps.length) liste.append(el("div", { class: "vide", text: "Aucun step ne correspond." }));
-    for (const s of steps) {
-      const p = App.estEditrice() ? App.donnees.perso.get(s.id) : null;
-      liste.append(el("button", { type: "button", class: "ligne", onclick: () => ouvrirFicheStep(s.id) },
-        lettre(s.etiquette),
-        el("span", { class: "ligne-texte" }, el("span", { class: "ligne-titre", text: s.nom }), el("span", { class: "ligne-sous", text: sousTitreStep(s) })),
-        p && p.niveau ? pastilleNiveau(p.niveau) : null));
+    else if (triSteps === "az") {
+      liste.append(el("div", { class: "bloc-lignes" }, steps.map((s) => ligneDeStep(s, true))));
+    } else {
+      // Groupes par créateur (ordre alphabétique), « Créateur inconnu » à la fin
+      const groupes = new Map();
+      for (const s of steps) {
+        if (!groupes.has(s.createur_id)) groupes.set(s.createur_id, []);
+        groupes.get(s.createur_id).push(s);
+      }
+      const ordre = [...groupes.keys()].sort((a, b) => {
+        const ca = App.createur(a), cb = App.createur(b);
+        if (!ca || !cb) return ca ? -1 : cb ? 1 : 0;
+        return parNom(ca, cb);
+      });
+      for (const id of ordre) {
+        const c = App.createur(id);
+        const ses = groupes.get(id);
+        const tete = c
+          ? el("button", { type: "button", class: "groupe-tete", onclick: () => ouvrirFicheCreateur(c.id, "Steps") },
+              avatar(c),
+              el("span", { class: "ligne-texte" }, el("span", { class: "groupe-nom", text: c.nom }), el("span", { class: "ligne-sous", text: sousTitreGroupe(c, ses.length) })))
+          : el("div", { class: "groupe-tete" }, lettre(null),
+              el("span", { class: "ligne-texte" }, el("span", { class: "groupe-nom", text: "Créateur inconnu" }), el("span", { class: "ligne-sous", text: pluriel(ses.length, "step") })));
+        liste.append(el("section", { class: "groupe" }, tete, el("div", { class: "bloc-lignes" }, ses.map((s) => ligneDeStep(s, false)))));
+      }
     }
-    hasard.replaceChildren(icone(ICONES.de, 22, 2), steps.length > 1 ? "Tirer un step parmi ces " + steps.length : "Tirer un step");
+    const texte = steps.length > 1 ? "Tirer un step parmi ces " + steps.length : "Tirer un step";
+    hasard.setAttribute("aria-label", texte);
+    hasard.title = texte;
     hasard.disabled = steps.length === 0;
     hasard.onclick = () => {
       let choix = steps;

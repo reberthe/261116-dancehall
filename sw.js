@@ -3,7 +3,7 @@
 // Ne garde JAMAIS : les images de la carte (règle d'OpenStreetMap), la recherche de lieux, les réponses de Supabase.
 "use strict";
 
-const VERSION = "4a4";
+const VERSION = "4a5";
 const CACHE = "riddim-" + VERSION;
 
 // Fichiers de l'appli (mêmes adresses que dans index.html)
@@ -17,6 +17,7 @@ const FICHIERS = [
   "carte.js?v=" + VERSION,
   "cours.js?v=" + VERSION,
   "savoir.js?v=" + VERSION,
+  "fonts/anton-latin-400.woff2",   // police d'affiche (lettres des titres)
   "manifest.json",
   "icones/icone-180.png",
   "icones/icone-192.png",

@@ -352,15 +352,40 @@ App.redessiner = function () {
   if (onglet) onglet.dessiner(contenu);
 };
 
-// En-tête d'un onglet : grand titre + bande + bouton du profil (déconnexion)
+// En-tête d'un onglet : grand titre en lettres d'affiche + bouton du profil (déconnexion)
+// titre : un texte, ou { titre, surtitre, sous (élément sous le titre), grand }
 App.entete = function (titre, ...actions) {
-  return el("div", { class: "entete" },
-    el("div", {}, el("h1", { text: titre }),
-      el("div", { class: "bande", "aria-hidden": "true" }, el("span"), el("span"), el("span"))),
+  const t = typeof titre === "string" ? { titre } : titre;
+  return el("div", { class: "entete" + (t.grand ? " grand" : "") },
+    el("div", { class: "entete-titre" },
+      t.surtitre ? el("span", { class: "surtitre", text: t.surtitre }) : null,
+      el("h1", { text: t.titre }),
+      t.sous || null),
     el("div", { class: "entete-actions" }, ...actions,
       el("button", { type: "button", class: "pastille-profil", onclick: App.menuProfil, "aria-label": "Profil et déconnexion" },
         App.profil ? App.profil.prenom : "")));
 };
+
+// Décors derrière le haut d'un onglet : dessins fixes écrits ici (jamais de données dedans)
+const DECORS = {
+  // Steps : bandes vert-or-noir en diagonale dans le coin
+  bandes: '<svg viewBox="0 0 390 190" width="390" height="190"><g transform="translate(300 -40) rotate(35)">' +
+    '<rect width="16" height="190" fill="#2F7A4D"/><rect x="22" width="16" height="190" fill="#E2B84A"/><rect x="44" width="16" height="190" fill="#1E1E1C"/></g></svg>',
+  // Savoir : le drapeau en filigrane (triangles verts, X doré)
+  drapeau: '<svg viewBox="0 0 390 230" preserveAspectRatio="none" width="100%" height="230">' +
+    '<path d="M0 0H390L195 115Z" fill="#2F7A4D" opacity="0.12"/><path d="M0 230H390L195 115Z" fill="#2F7A4D" opacity="0.12"/>' +
+    '<path d="M0 0L390 230M390 0L0 230" stroke="#E2B84A" stroke-width="30" opacity="0.4"/></svg>',
+};
+App.decor = function (nom) {
+  const d = el("div", { class: "decor " + nom, "aria-hidden": "true" });
+  d.innerHTML = DECORS[nom];
+  return d;
+};
+
+// Petite bande vert-or-noir
+function tricolore() {
+  return el("span", { class: "tricolore", "aria-hidden": "true" }, el("span"), el("span"), el("span"));
+}
 
 App.menuProfil = function () {
   App.ouvrirFeuille((c) => {
