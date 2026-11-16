@@ -3,16 +3,55 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F0E6">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Dancehall">
 <title>Dancehall</title>
-<style>
-  body { margin: 0; padding: 32px 20px; font-family: -apple-system, system-ui, sans-serif; background: #F4F0E6; color: #1E1E1C; }
-  a { display: block; margin: 10px 0; padding: 14px 16px; border-radius: 16px; background: #FFFFFF; color: #1E1E1C; text-decoration: none; font-weight: 600; }
-</style>
+<link rel="stylesheet" href="style.css?v=3a1">
 </head>
 <body>
-<h1>Dancehall · tests (étape 1)</h1>
-<a href="test/connexion.html">Test connexion Supabase</a>
-<a href="test/carte.html">Test carte</a>
-<a href="test/photo.html">Test photo</a>
+
+<!-- Connexion -->
+<section id="ecran-connexion" hidden>
+  <h1>Dancehall</h1>
+  <div class="bande" aria-hidden="true"><span></span><span></span><span></span></div>
+  <form id="form-connexion" novalidate>
+    <label>E-mail
+      <input id="connexion-email" type="email" autocomplete="username" inputmode="email" required>
+    </label>
+    <label>Mot de passe
+      <input id="connexion-mdp" type="password" autocomplete="current-password" required>
+    </label>
+    <button type="submit" class="bouton-principal" id="bouton-connexion">Se connecter</button>
+    <p id="connexion-erreur" class="erreur" role="alert"></p>
+  </form>
+</section>
+
+<!-- Écran sans accès (compte connecté mais pas membre) -->
+<section id="ecran-sans-acces" hidden>
+  <h1>Pas d'accès</h1>
+  <p>Ce compte n'a pas encore accès à l'appli. Demande à Emma de l'ajouter.</p>
+  <button type="button" class="bouton-secondaire" id="bouton-deconnexion-sans-acces">Se déconnecter</button>
+</section>
+
+<!-- Appli -->
+<div id="appli" hidden>
+  <main id="contenu"></main>
+  <nav id="barre" aria-label="Onglets"></nav>
+</div>
+
+<!-- Feuilles plein écran (fiches et formulaires) -->
+<div id="feuilles"></div>
+
+<!-- Messages courts -->
+<div id="message" role="status" aria-live="polite"></div>
+
+<script src="config.js?v=3a1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"
+        integrity="sha384-uteMfOloLDGt042uDz+xHGF3ym63/WQ6rFq7murQRG8Ih7QrXGEGNtWd8688sb4O"
+        crossorigin="anonymous"></script>
+<script src="app.js?v=3a1"></script>
+<script src="steps.js?v=3a1"></script>
 </body>
 </html>

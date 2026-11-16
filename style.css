@@ -1,0 +1,157 @@
+/* Appli dancehall — style Jamaïque adouci */
+:root {
+  --sable: #F4F0E6;
+  --blanc: #FFFFFF;
+  --encre: #1E1E1C;
+  --gris: #5F5A50;
+  --trait: #E4DDCD;
+  --vert: #2F7A4D;
+  --or: #E2B84A;
+  --beige: #E4DDCD;
+  --rouge: #B42318;
+  --barre: #1E1E1C;
+  --haut: env(safe-area-inset-top);
+  --bas: env(safe-area-inset-bottom);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--sable); color: var(--encre);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", system-ui, sans-serif; font-size: 16px;
+  -webkit-text-size-adjust: 100%; overscroll-behavior: none; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+a { color: var(--vert); }
+
+/* ---------- Connexion ---------- */
+#ecran-connexion, #ecran-sans-acces { padding: calc(var(--haut) + 48px) 24px 24px; max-width: 480px; margin: 0 auto; }
+#ecran-connexion h1, #ecran-sans-acces h1 { font-size: 40px; margin: 0 0 8px; letter-spacing: -0.5px; }
+.bande { display: flex; gap: 3px; margin-bottom: 28px; }
+.bande span { width: 22px; height: 4px; border-radius: 2px; background: var(--vert); }
+.bande span:nth-child(2) { background: var(--or); }
+.bande span:nth-child(3) { background: var(--encre); }
+#form-connexion { display: flex; flex-direction: column; gap: 16px; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 14px; font-weight: 600; color: var(--gris); }
+input[type=text], input[type=email], input[type=password], input[type=search], input[type=number], select, textarea {
+  width: 100%; min-height: 48px; padding: 12px 14px; border: 1.5px solid var(--trait); border-radius: 14px;
+  background: var(--blanc); font-size: 16px; color: var(--encre); }
+textarea { min-height: 96px; resize: vertical; line-height: 1.4; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--vert); outline-offset: 1px; }
+.erreur { color: var(--rouge); font-weight: 600; min-height: 1.2em; margin: 0; }
+
+/* ---------- Boutons ---------- */
+.bouton-principal { height: 50px; padding: 0 22px; border: none; border-radius: 25px; background: var(--or);
+  color: var(--encre); font-weight: 700; font-size: 16px; }
+.bouton-secondaire { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: var(--blanc);
+  color: var(--encre); font-weight: 600; }
+.bouton-danger { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: var(--blanc);
+  color: var(--rouge); font-weight: 700; }
+.bouton-danger.confirmer { background: var(--rouge); color: var(--blanc); }
+.bouton-rond { width: 48px; height: 48px; border: none; border-radius: 24px; background: var(--or); color: var(--encre);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+button:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------- Appli et onglets ---------- */
+#contenu { padding: calc(var(--haut) + 20px) 20px calc(var(--bas) + 170px); max-width: 640px; margin: 0 auto; }
+#barre { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; background: var(--barre);
+  display: flex; justify-content: space-around; padding: 8px 0 calc(var(--bas) + 8px); }
+#barre button { background: none; border: none; color: #B8B2A6; display: flex; flex-direction: column;
+  align-items: center; gap: 3px; min-width: 64px; min-height: 48px; font-size: 11px; font-weight: 500; }
+#barre button[aria-current=page] { color: var(--or); font-weight: 700; }
+#barre svg { width: 24px; height: 24px; }
+
+.entete { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.entete h1 { margin: 0; font-size: 36px; letter-spacing: -0.5px; }
+.entete .bande { margin: 6px 0 0; }
+.entete-actions { display: flex; gap: 8px; align-items: center; }
+.pastille-profil { height: 40px; padding: 0 14px; border: none; border-radius: 20px; background: var(--blanc);
+  font-size: 14px; font-weight: 600; }
+
+.champ-recherche { display: flex; flex-direction: row; align-items: center; font-weight: 400; gap: 10px; height: 48px; padding: 0 16px; border-radius: 24px;
+  background: var(--blanc); color: var(--gris); margin-bottom: 12px; }
+.champ-recherche input { border: none; min-height: 0; padding: 0; background: transparent; }
+.champ-recherche input:focus { outline: none; }
+
+.filtres { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.filtre { height: 36px; padding: 0 14px; border-radius: 18px; border: 1.5px solid #D9D1BF; background: var(--blanc);
+  font-size: 14px; font-weight: 500; }
+.filtre[aria-pressed=true] { background: var(--or); border-color: var(--or); font-weight: 700; }
+.compte { margin: 0 0 12px; font-size: 13px; color: var(--gris); }
+
+.liste { display: flex; flex-direction: column; gap: 10px; }
+.ligne { display: flex; align-items: center; gap: 14px; width: 100%; padding: 14px 16px; border: none; border-radius: 20px;
+  background: var(--blanc); text-align: left; }
+.ligne-texte { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.ligne-titre { font-weight: 600; font-size: 16px; }
+.ligne-sous { font-size: 13px; color: var(--gris); }
+.vide { padding: 24px 16px; text-align: center; color: var(--gris); background: var(--blanc); border-radius: 20px; }
+
+/* Lettres M / G / N / X */
+.lettre { width: 40px; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 15px; flex-shrink: 0; }
+.lettre.man { background: var(--vert); color: var(--blanc); }
+.lettre.gyal { background: var(--or); color: var(--encre); }
+.lettre.neutre { background: var(--beige); color: var(--encre); }
+.lettre.mixte { background: var(--sable); color: var(--encre); border: 3px solid; border-color: var(--vert) var(--or) var(--or) var(--vert); }
+.lettre.inconnu { background: var(--blanc); color: var(--gris); border: 2px dashed #CFC7B5; }
+.lettre.carre { border-radius: 10px; }
+.lettre.petite { width: 28px; height: 28px; font-size: 12px; }
+
+/* Niveau */
+.niveau { height: 26px; padding: 0 10px; border-radius: 13px; background: var(--sable); font-size: 12px; font-weight: 600;
+  display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.niveau svg { width: 12px; height: 12px; }
+
+.bouton-hasard { position: fixed; left: 20px; right: 20px; bottom: calc(var(--bas) + 84px); z-index: 40;
+  max-width: 600px; margin: 0 auto; height: 54px; border: none; border-radius: 27px; background: var(--vert);
+  color: var(--blanc); font-weight: 700; font-size: 16px; display: flex; align-items: center; justify-content: center; gap: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.15); }
+
+.bientot { padding: 32px 20px; background: var(--blanc); border-radius: 20px; color: var(--gris); text-align: center; line-height: 1.5; }
+
+/* ---------- Feuilles plein écran ---------- */
+.feuille { position: fixed; inset: 0; z-index: 100; background: var(--sable); overflow-y: auto;
+  -webkit-overflow-scrolling: touch; padding: calc(var(--haut) + 14px) 20px calc(var(--bas) + 40px); }
+.feuille-contenu { max-width: 640px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+.feuille-haut { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.bouton-retour { height: 44px; padding: 0 14px 0 8px; border: none; border-radius: 22px; background: var(--blanc);
+  display: flex; align-items: center; gap: 4px; font-weight: 600; font-size: 15px; }
+.feuille h1 { margin: 0; font-size: 32px; letter-spacing: -0.5px; overflow-wrap: anywhere; }
+.feuille .sous-titre { margin: -8px 0 0; font-size: 14px; color: var(--gris); }
+.puces { display: flex; flex-wrap: wrap; gap: 8px; }
+.puce { height: 30px; padding: 0 12px; border-radius: 15px; background: var(--blanc); font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; }
+.puce.man { background: var(--vert); color: var(--blanc); }
+.puce.gyal { background: var(--or); }
+.puce.neutre { background: var(--beige); }
+.bloc { padding: 14px 16px; border-radius: 20px; background: var(--blanc); display: flex; flex-direction: column; gap: 8px; }
+.bloc h2 { margin: 0; font-size: 13px; font-weight: 700; color: var(--gris); text-transform: uppercase; letter-spacing: 0.6px; }
+.bloc p { margin: 0; line-height: 1.45; white-space: pre-line; overflow-wrap: anywhere; }
+.petit { font-size: 13px; color: var(--gris); }
+.tres-petit { font-size: 11px; color: var(--gris); }
+.carte-createur { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: none; border-radius: 20px;
+  background: var(--blanc); text-align: left; width: 100%; }
+.lien-video { display: flex; align-items: center; gap: 10px; min-height: 46px; padding: 10px 16px; border-radius: 23px;
+  background: var(--blanc); text-decoration: none; color: var(--encre); font-size: 15px; overflow-wrap: anywhere; }
+
+.prive { border: 1.5px solid var(--or); }
+.prive .bouton-secondaire, .bloc .bouton-secondaire { background: var(--sable); }
+.prive h2 { color: #8A6A12; display: flex; align-items: center; gap: 6px; }
+.segments { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 22px; background: var(--sable); }
+.segments.quatre { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.segments button { min-height: 38px; border: none; border-radius: 18px; background: transparent; font-size: 13px; font-weight: 500; padding: 0 4px; }
+.segments button[aria-pressed=true] { background: var(--or); font-weight: 700; }
+.interrupteur { display: flex; align-items: center; justify-content: space-between; flex-direction: row;
+  font-size: 15px; font-weight: 600; color: var(--encre); min-height: 44px; }
+.interrupteur input { width: 24px; height: 24px; accent-color: var(--vert); }
+
+.formulaire { display: flex; flex-direction: column; gap: 14px; }
+.ligne-boutons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.aide { font-size: 12px; font-weight: 500; color: var(--gris); }
+
+/* ---------- Messages ---------- */
+#message { position: fixed; left: 16px; right: 16px; top: calc(var(--haut) + 10px); z-index: 300; max-width: 560px; margin: 0 auto;
+  padding: 12px 16px; border-radius: 14px; background: var(--encre); color: var(--blanc); font-size: 14px; font-weight: 600;
+  opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+#message.visible { opacity: 1; pointer-events: auto; }
+#message.erreur-msg { background: var(--rouge); }
