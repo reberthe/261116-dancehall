@@ -3,7 +3,7 @@
 // Ne garde JAMAIS : les images de la carte (règle d'OpenStreetMap), la recherche de lieux, les réponses de Supabase.
 "use strict";
 
-const VERSION = "4a5";
+const VERSION = "4a6";
 const CACHE = "riddim-" + VERSION;
 
 // Fichiers de l'appli (mêmes adresses que dans index.html)

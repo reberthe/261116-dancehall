@@ -1,5 +1,5 @@
-// cours.js — onglet Cours (privé : chaque éditrice ne voit que ses cours) : liste par mois, fiche, formulaire,
-// steps vus (choisis dans la base ou créés à la volée), « Vu en cours le … » dans la fiche d'un step
+// cours.js — onglet Cours (privé : chaque membre, copines comprises, ne voit que ses cours) : liste par mois, fiche, formulaire,
+// steps vus (choisis dans la base, ou créés à la volée par Emma et Jade), historique dans la fiche d'un step
 "use strict";
 
 let rechercheCours = "";
@@ -10,12 +10,14 @@ const formatJourLong = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", weekd
 const formatMois = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", month: "long", year: "numeric" });
 const formatJourSemaine = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", weekday: "short" });
 const formatMoisCourt = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", month: "short" });
+const formatJourMois = new Intl.DateTimeFormat("fr-BE", { timeZone: "UTC", day: "numeric", month: "short" });
 const formatAujourdhui = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Brussels" });   // AAAA-MM-JJ
 
 const versDate = (jour) => new Date(jour + "T12:00:00Z");   // midi UTC : jamais de décalage d'un jour
 const majuscule = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 function aujourdhui() { return formatAujourdhui.format(new Date()); }
 function jourCourt(jour) { return formatJourCourt.format(versDate(jour)); }
+function jourMois(jour) { return formatJourMois.format(versDate(jour)); }   // « 12 nov. »
 function jourLong(jour) { return majuscule(formatJourLong.format(versDate(jour))); }
 
 // ---------- Données ----------
@@ -53,7 +55,7 @@ function coursFiltres() {
 function dessinerCours(contenu) {
   contenu.append(App.entete({ titre: "Cours", surtitre: "Mes sessions",
     sous: el("span", { class: "sous-entete" }, icone(ICONES.cadenas, 13, 2.4), "Visibles par toi seule") },
-    App.peutEcrire() ? el("button", { type: "button", class: "bouton-rond", "aria-label": "Noter un cours", onclick: () => ouvrirFormulaireCours(null) }, icone(ICONES.plus, 22, 2.6)) : null));
+    App.peutEcrirePrive() ? el("button", { type: "button", class: "bouton-rond", "aria-label": "Noter un cours", onclick: () => ouvrirFormulaireCours(null) }, icone(ICONES.plus, 22, 2.6)) : null));
 
   const champ = el("input", { type: "search", placeholder: "Un prof, une salle, un step…", "aria-label": "Rechercher un cours",
     value: rechercheCours, autocomplete: "off" });
@@ -66,7 +68,7 @@ function dessinerCours(contenu) {
   function dessinerListe() {
     const cours = coursFiltres();
     liste.replaceChildren();
-    if (!App.donnees.cours.length) { liste.append(el("div", { class: "vide", text: App.peutEcrire() ? "Pas encore de cours. Touche + pour noter ton premier cours." : "Pas encore de cours." })); return; }
+    if (!App.donnees.cours.length) { liste.append(el("div", { class: "vide", text: App.peutEcrirePrive() ? "Pas encore de cours. Touche + pour noter ton premier cours." : "Pas encore de cours." })); return; }
     if (!cours.length) { liste.append(el("div", { class: "vide", text: "Aucun cours ne correspond." })); return; }
     let moisCourant = null;
     for (const c of cours) {
@@ -101,7 +103,7 @@ function ticketCours(c) {
       montres.length ? el("span", { class: "puces petites" }, montres) : el("span", { class: "ticket-salle", text: "Pas de step noté" })));
 }
 
-App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.estEditrice(), dessiner: dessinerCours });
+App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.aEspacePrive(), dessiner: dessinerCours });
 
 // ---------- Fiche d'un cours ----------
 function ouvrirFicheCours(id, retour = "Cours") {
@@ -114,7 +116,7 @@ function remplirFicheCours(c, id, retour) {
   if (!cours) { c.append(el("div", { class: "feuille-haut" }, App.boutonRetour(retour)), el("div", { class: "vide", text: "Ce cours n'existe plus." })); return; }
 
   c.append(el("div", { class: "feuille-haut" }, App.boutonRetour(retour),
-    App.peutEcrire() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireCours(cours.id) }, "Modifier") : null));
+    App.peutEcrirePrive() ? el("button", { type: "button", class: "bouton-principal", onclick: () => ouvrirFormulaireCours(cours.id) }, "Modifier") : null));
   c.append(el("h1", { text: jourLong(cours.jour) }));
   if (cours.salle) c.append(el("p", { class: "sous-titre", text: cours.salle }));
 
@@ -203,8 +205,13 @@ function ouvrirFormulaireCours(id) {
         } }, lettre(s.etiquette), el("span", { class: "ligne-texte" }, el("span", { class: "ligne-titre", text: "+ " + s.nom }),
           el("span", { class: "ligne-sous", text: sousTitreStep(s) }))));
       }
-      // Step absent de la base : on le crée tout de suite (nom seulement), à compléter dans l'onglet Steps
-      if (!App.donnees.steps.some((s) => sansAccents(s.nom) === sansAccents(texte))) {
+      // Step absent de la base : Emma et Jade le créent tout de suite (nom seulement), à compléter dans l'onglet Steps ;
+      // une copine ne peut pas écrire dans la base commune
+      const absent = !App.donnees.steps.some((s) => sansAccents(s.nom) === sansAccents(texte));
+      if (absent && !App.peutEcrire()) {
+        resultats.append(el("p", { class: "aide", text: "Pas dans la base : demande à Emma ou Jade de l'ajouter, puis note-le ici." }));
+      }
+      if (absent && App.peutEcrire()) {
         const creer = el("button", { type: "button", class: "bouton-secondaire" }, "+ Nouveau step « " + texte + " »");
         creer.addEventListener("click", async () => {
           if (texte.length > 80) { message("80 caractères au plus pour le nom d'un step.", true); return; }
@@ -310,13 +317,3 @@ function boutonSupprimerCours(cours) {
   return el("div", { class: "ligne-boutons" }, bouton);
 }
 
-// ---------- Dans la fiche d'un step : « Vu en cours le … » ----------
-function vuEnCours(stepId) {
-  const ids = new Set(App.donnees.coursSteps.filter((cs) => cs.step_id === stepId).map((cs) => cs.cours_id));
-  const cours = App.donnees.cours.filter((c) => ids.has(c.id)).sort((a, b) => b.jour.localeCompare(a.jour));
-  if (!cours.length) return null;
-  return el("div", { class: "vu-en-cours" },
-    el("span", { class: "aide", text: "Vu en cours le" }),
-    el("div", { class: "puces" }, cours.map((c) =>
-      el("button", { type: "button", class: "puce", onclick: () => ouvrirFicheCours(c.id, "Retour") }, jourCourt(c.jour)))));
-}

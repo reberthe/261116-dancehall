@@ -171,7 +171,10 @@ function erreurLisible(erreur) {
 
 App.estEditrice = () => !!App.profil && (App.profil.role === "admin" || App.profil.role === "editrice");
 App.estAdmin = () => !!App.profil && App.profil.role === "admin";
-App.peutEcrire = () => App.estEditrice() && !App.horsLigne;   // boutons d'ajout et de modification
+App.peutEcrire = () => App.estEditrice() && !App.horsLigne;   // base commune : boutons d'ajout et de modification
+// Espace privé (Ma bibliothèque, cours) : chaque membre, copines comprises, a le sien (script 11)
+App.aEspacePrive = () => !!App.profil;
+App.peutEcrirePrive = () => App.aEspacePrive() && !App.horsLigne;
 App.createur = (id) => App.donnees.createurs.find((c) => c.id === id) || null;
 App.sousCategorie = (cle) => App.donnees.sousCategories.find((x) => x.cle === cle) || null;
 App.lieu = (id) => App.donnees.lieux.find((l) => l.id === id) || null;
@@ -197,6 +200,13 @@ App.ouvrirFeuille = function (construire, redessinable = false) {
   construire(contenu);
   return feuille;
 };
+// Feuille qui monte du bas (dé) : toucher le fond sombre la ferme
+App.ouvrirTiroir = function (construire) {
+  const f = App.ouvrirFeuille(construire);
+  f.classList.add("tiroir");
+  f.addEventListener("click", (e) => { if (e.target === f) App.fermerFeuille(); });
+  return f;
+};
 // Après un enregistrement : redessine l'onglet et les fiches ouvertes (les formulaires restent tels quels)
 App.rafraichir = function () {
   for (const f of App.feuilles) if (f.redessiner) f.redessiner();
@@ -216,6 +226,9 @@ App.boutonRetour = function (texte, quandOnTouche) {
 };
 
 // ---------- Lecture des données ----------
+
+// Colonnes de la partie privée d'un step (perso_steps)
+const COLONNES_PERSO = "step_id, niveau, a_travailler, notes, dans_biblio, reperes, video";
 
 // Lit toute une table, par paquets de 1000 (limite de l'API)
 async function toutLire(table, colonnes, tri) {
@@ -249,18 +262,17 @@ App.chargerTout = async function () {
   App.donnees.createurs = createurs;
   App.donnees.lieux = lieux;
   App.donnees.membres = membres;
-  if (App.estEditrice()) {
-    const [perso, modifs, cours, coursSteps] = await Promise.all([
-      toutLire("perso_steps", "step_id, niveau, a_travailler, notes"),
-      toutLire("modifications", "table_nom, fiche_id, prenom, modifie_le"),
-      toutLire("cours", "id, jour, prof_texte, prof_createur_id, salle, lien_chore, notes, modifie_le", "id"),
-      toutLire("cours_steps", "id, cours_id, step_id, nom_step", "id"),
-    ]);
-    App.donnees.cours = cours;
-    App.donnees.coursSteps = coursSteps;
-    App.donnees.perso = new Map(perso.map((p) => [p.step_id, p]));
-    App.donnees.modifs = new Map(modifs.map((m) => [m.table_nom + ":" + m.fiche_id, m]));
-  }
+  // Espace privé de la personne connectée (la base ne renvoie que ses lignes)
+  const [perso, cours, coursSteps, modifs] = await Promise.all([
+    toutLire("perso_steps", COLONNES_PERSO),
+    toutLire("cours", "id, jour, prof_texte, prof_createur_id, salle, lien_chore, notes, modifie_le", "id"),
+    toutLire("cours_steps", "id, cours_id, step_id, nom_step", "id"),
+    App.estEditrice() ? toutLire("modifications", "table_nom, fiche_id, prenom, modifie_le") : [],   // « modifié par » : Emma et Jade
+  ]);
+  App.donnees.cours = cours;
+  App.donnees.coursSteps = coursSteps;
+  App.donnees.perso = new Map(perso.map((p) => [p.step_id, p]));
+  App.donnees.modifs = new Map(modifs.map((m) => [m.table_nom + ":" + m.fiche_id, m]));
   App.derniereLecture = Date.now();
   App.sauverCopie();
   await App.chargerPhotos();
@@ -406,7 +418,7 @@ App.menuProfil = function () {
 // Onglets (dans l'ordre de la barre) ; chaque fichier remplace le sien
 App.enregistrerOnglet("steps", { titre: "Steps", icone: ICONES.steps, dessiner: () => {} });   // remplacé par steps.js
 App.enregistrerOnglet("carte", { titre: "Carte", icone: ICONES.carte, dessiner: () => {} });   // remplacé par carte.js
-App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.estEditrice(), dessiner: () => {} });   // remplacé par cours.js
+App.enregistrerOnglet("cours", { titre: "Cours", icone: ICONES.cours, visible: () => App.aEspacePrive(), dessiner: () => {} });   // remplacé par cours.js
 App.enregistrerOnglet("savoir", { titre: "Savoir", icone: ICONES.savoir, dessiner: () => {} });   // remplacé par savoir.js
 
 // ---------- Connexion ----------

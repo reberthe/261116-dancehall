@@ -35,6 +35,8 @@ Tout le reste est dans les scripts `sql/`.
 9. `sql/08_instagram.sql` : compte Instagram des créateurs (le @ cliquable dans leur fiche). Doit afficher « ok : compte Instagram des créateurs »
 10. `sql/11_espace_prive.sql` : espace privé pour tout le monde, copines comprises (« Ma bibliothèque », Mes repères, Ma vidéo, onglet Cours). Chacune ne voit et n'écrit que ses lignes ; la base commune reste écrite par Emma et Jade. Doit afficher les 9 colonnes de `perso_steps` et 3 règles avec `est_membre()`. Puis relancer `04_test_securite.sql` (48 / 48).
 
+11. `sql/12_reprise_bibliotheque.sql` : **une seule fois**, après 11 et avant de publier l'appli 4a6. Un step qui avait déjà un niveau, « À travailler » ou une note entre dans « Ma bibliothèque » de sa propriétaire. Rejouable sans effet (la reprise est notée dans `prive.reprises`).
+
 ⚠️ Si on relance un jour `02_securite.sql`, il faut relancer ensuite `06`, `07`, `08` et `11`, dans l'ordre : 02 remet les droits de départ et oublie les colonnes ajoutées après.
 
 ## 💾 Sauvegarde (une fois par mois)
@@ -43,6 +45,7 @@ L'offre gratuite de Supabase ne fait pas de sauvegarde automatique.
 - `sql/09_sauvegarde.sql` (SQL Editor → Run) : copier le résultat dans `sauvegarde_AAAA-MM-JJ.json`, sur l'ordi d'Emma. ⚠️ Jamais sur GitHub : il contient les cours et la partie privée de chacune (Jade et les copines), les prénoms et les rôles. Garder les 3 dernières.
 - `sql/10_restauration.sql` : seulement en cas de perte des données. Les tables doivent être vides (le script n'écrase jamais rien) ; coller la sauvegarde à la place de `COLLER_ICI`.
 - Les photos ne sont pas dans la sauvegarde.
+- Après une restauration dans un projet neuf, **ne pas lancer** `12_reprise_bibliotheque.sql` : la bibliothèque est déjà dans la sauvegarde (le relancer y remettrait les steps retirés à la main).
 - Un rappel arrive le 1er de chaque mois à 18 h 35 (tâche programmée « Rappel sauvegarde Riddim »).
 
 Dans la base, les étiquettes gardent leurs noms techniques (`man`, `gyal`) ; l'appli les affiche « Male » (M) et « Female » (F).
@@ -60,9 +63,9 @@ Tous les scripts sont rejouables sans erreur.
 - `index.html`, `style.css` (couleurs, lettres d'affiche, tickets, frise…)
 - `config.js` : adresse du projet et clé publique (jamais de clé secrète)
 - `app.js` : connexion, chargement des données, onglets, fiches, photos (liens signés)
-- `steps.js` : onglet Steps (filtres sur une ligne, tri « Par créateur | A → Z », dé rond)
+- `steps.js` : onglet Steps (« Commune | Ma bibliothèque », filtres sur une ligne, tri « Par créateur | A → Z », dé avec réglages), fiche d'un step avec son bloc « Ma bibliothèque »
 - `createurs.js` : liste des créateurs (mode « Liste » de l'onglet Carte), fiches crew et personne, membres, photos de profil (avec cadrage)
-- `cours.js` : onglet Cours (privé : chacune ne voit que ses cours ; un ticket par cours), « Vu en cours le … » dans la fiche d'un step
+- `cours.js` : onglet Cours (privé, pour chaque membre, copines comprises : chacune ne voit que ses cours ; un ticket par cours)
 - `savoir.js` : onglet Savoir (lexique en dictionnaire avec un A-Z sur le côté, histoire en frise par époque avec les créateurs concernés)
 - `carte.js` : onglet Carte (titre JAMAÏQUE caché au zoom, filtres dans un bouton, bulles des villes puis des quartiers, « Lieu inconnu » au centre de la Jamaïque), lieux (création, renommage, suppression)
 - `fonts/` : police d'affiche Anton (`anton-latin-400.woff2`) et sa licence (`OFL.txt`)
@@ -98,6 +101,15 @@ Tous les scripts sont rejouables sans erreur.
 
 - supabase-js 2.119.0
 - Leaflet 1.9.4
+
+## 📚 Ma bibliothèque (version 4a6)
+
+- En haut de l'onglet Steps : « Commune » (tous les steps) ou « Ma bibliothèque » (les miens). Le choix est gardé sur le téléphone, pour chaque compte ; au départ, Ma bibliothèque si elle n'est pas vide.
+- Ma bibliothèque = les steps notés dans mes cours (tout seuls) + ceux ajoutés à la main (« Ajouter à ma bibliothèque » dans la fiche).
+- Fiche : historique des cours où je l'ai vu, niveau, À travailler, Mes repères, Notes, Ma vidéo (un lien `https://`). « Retirer » seulement pour un step ajouté à la main ; ses infos sont gardées.
+- 🔒 Ma vidéo : le lien est caché aux autres, mais la vidéo n'est privée que si elle n'est pas partagée « à tous ceux qui ont le lien » dans Drive.
+- Dé : combien (1, 2, 3, 5, 10), parmi Ma bibliothèque ou la Commune, Female / Male / Neutre, priorité « À travailler » (ils sortent 3 fois plus souvent). Réglages gardés sur le téléphone.
+- Les copines ont le même espace privé (bibliothèque, cours). Elles ne créent pas de step : dans un cours, seulement des steps déjà dans la base.
 
 ## 🎨 Style (version 4a5)
 
