@@ -159,20 +159,20 @@ begin
   end loop;
 end $$;
 
--- Partie privée : chaque éditrice ne voit et n'écrit que ses propres lignes
+-- Partie privée : chaque membre (copines comprises depuis le script 11) ne voit et n'écrit que ses propres lignes
 do $$
 declare t text;
 begin
   foreach t in array array['perso_steps', 'cours'] loop
     execute format('drop policy if exists "a moi" on public.%I', t);
-    execute format('create policy "a moi" on public.%I for all to authenticated using ((select prive.est_editrice()) and personne = (select auth.uid())) with check ((select prive.est_editrice()) and personne = (select auth.uid()))', t);
+    execute format('create policy "a moi" on public.%I for all to authenticated using ((select prive.est_membre()) and personne = (select auth.uid())) with check ((select prive.est_membre()) and personne = (select auth.uid()))', t);
   end loop;
 end $$;
 
 drop policy if exists "a moi" on public.cours_steps;
 create policy "a moi" on public.cours_steps for all to authenticated
-  using ((select prive.est_editrice()) and exists (select 1 from public.cours c where c.id = cours_id and c.personne = (select auth.uid())))
-  with check ((select prive.est_editrice()) and exists (select 1 from public.cours c where c.id = cours_id and c.personne = (select auth.uid())));
+  using ((select prive.est_membre()) and exists (select 1 from public.cours c where c.id = cours_id and c.personne = (select auth.uid())))
+  with check ((select prive.est_membre()) and exists (select 1 from public.cours c where c.id = cours_id and c.personne = (select auth.uid())));
 
 -- « Modifié par » : lecture pour Emma et Jade seulement, écriture par la base seulement
 drop policy if exists "lecture editrices" on public.modifications;

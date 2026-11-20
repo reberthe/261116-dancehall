@@ -33,11 +33,14 @@ Tout le reste est dans les scripts `sql/`.
 7. `sql/06_cours_steps_gardes.sql` : un step supprimé reste dans les cours où il a été vu (son nom est gardé). Doit afficher « ok : un step supprimé reste dans le cours »
 8. `sql/07_sous_categories.sql` : sous-catégories des steps (pour l'instant « Waistline technique » sous Female). Pour en ajouter une : une ligne de plus dans ce script, puis le relancer. Doit afficher « ok : Waistline technique (gyal) »
 9. `sql/08_instagram.sql` : compte Instagram des créateurs (le @ cliquable dans leur fiche). Doit afficher « ok : compte Instagram des créateurs »
+10. `sql/11_espace_prive.sql` : espace privé pour tout le monde, copines comprises (« Ma bibliothèque », Mes repères, Ma vidéo, onglet Cours). Chacune ne voit et n'écrit que ses lignes ; la base commune reste écrite par Emma et Jade. Doit afficher les 9 colonnes de `perso_steps` et 3 règles avec `est_membre()`. Puis relancer `04_test_securite.sql` (48 / 48).
+
+⚠️ Si on relance un jour `02_securite.sql`, il faut relancer ensuite `06`, `07`, `08` et `11`, dans l'ordre : 02 remet les droits de départ et oublie les colonnes ajoutées après.
 
 ## 💾 Sauvegarde (une fois par mois)
 
 L'offre gratuite de Supabase ne fait pas de sauvegarde automatique.
-- `sql/09_sauvegarde.sql` (SQL Editor → Run) : copier le résultat dans `sauvegarde_AAAA-MM-JJ.json`, sur l'ordi d'Emma. ⚠️ Jamais sur GitHub : il contient les cours et la partie privée de Jade, les prénoms et les rôles. Garder les 3 dernières.
+- `sql/09_sauvegarde.sql` (SQL Editor → Run) : copier le résultat dans `sauvegarde_AAAA-MM-JJ.json`, sur l'ordi d'Emma. ⚠️ Jamais sur GitHub : il contient les cours et la partie privée de chacune (Jade et les copines), les prénoms et les rôles. Garder les 3 dernières.
 - `sql/10_restauration.sql` : seulement en cas de perte des données. Les tables doivent être vides (le script n'écrase jamais rien) ; coller la sauvegarde à la place de `COLLER_ICI`.
 - Les photos ne sont pas dans la sauvegarde.
 - Un rappel arrive le 1er de chaque mois à 18 h 35 (tâche programmée « Rappel sauvegarde Riddim »).

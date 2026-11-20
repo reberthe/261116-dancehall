@@ -1,6 +1,6 @@
 -- 04_test_securite.sql
 -- Test des règles d'accès, en se faisant passer pour chaque compte. À lancer dans Supabase → SQL Editor,
--- après donnees/01_membres.sql. Rejouable : les lignes de test (« __test__ ») sont supprimées à la fin.
+-- après donnees/01_membres.sql (et après 11_espace_prive.sql). Rejouable : les lignes de test (« __test__ ») sont supprimées à la fin.
 -- Résultat attendu : toutes les lignes avec ok = true.
 -- Les photos (dossier « photos ») seront testées depuis l'iPhone à l'étape 3.
 
@@ -16,7 +16,7 @@ declare
   noms text[] := '{}';
   comptes text[] := '{}';
   oks boolean[] := '{}';
-  id_crew bigint; id_pers bigint; id_step bigint; id_step2 bigint; id_lex bigint; id_cours bigint;
+  id_crew bigint; id_pers bigint; id_step bigint; id_step2 bigint; id_lex bigint; id_cours bigint; id_cours_copine bigint;
   nb int; ok boolean; date_avant timestamptz; txt text;
 begin
   if emma is null or jade is null or copine is null then
@@ -33,6 +33,7 @@ begin
   insert into public.perso_steps (personne, step_id, notes) values (emma, id_step, 'note Emma'), (jade, id_step, 'note Jade');
   insert into public.cours (personne, jour, notes) values (emma, current_date, '__test__ cours Emma') returning id into id_cours;
   insert into public.cours_steps (cours_id, step_id) values (id_cours, id_step);
+  insert into public.cours (personne, jour, notes) values (copine, current_date, '__test__ cours copine 1');
 
   -- =================== EMMA (admin) ===================
   perform set_config('request.jwt.claim.sub', emma::text, true);
@@ -59,6 +60,9 @@ begin
 
   select count(*) into nb from public.cours where id = id_cours;
   comptes := comptes || text 'Emma'; noms := noms || text 'voit son cours'; oks := oks || (nb = 1);
+
+  select count(*) into nb from public.cours where notes like '__test__ cours copine%';
+  comptes := comptes || text 'Emma'; noms := noms || text 'ne voit pas les cours de la copine'; oks := oks || (nb = 0);
 
   begin update public.createurs set etiquette = 'mixte' where id = id_pers; ok := false; exception when others then ok := true; end;
   comptes := comptes || text 'Emma'; noms := noms || text 'la base refuse « mixte » pour une personne'; oks := oks || ok;
@@ -143,14 +147,38 @@ begin
   delete from public.steps where id = id_step; get diagnostics nb = row_count;
   comptes := comptes || text 'Copine'; noms := noms || text 'ne peut pas supprimer un step'; oks := oks || (nb = 0);
 
+  -- Espace privé des copines (script 11) : seulement ses lignes à elle
   select count(*) into nb from public.perso_steps;
-  comptes := comptes || text 'Copine'; noms := noms || text 'ne voit aucune partie privée'; oks := oks || (nb = 0);
+  comptes := comptes || text 'Copine'; noms := noms || text 'ne voit pas la partie privée d''Emma ni de Jade'; oks := oks || (nb = 0);
 
-  begin insert into public.perso_steps (step_id, notes) values (id_step, 'copine'); ok := false; exception when others then ok := true; end;
-  comptes := comptes || text 'Copine'; noms := noms || text 'n''a pas de partie privée'; oks := oks || ok;
+  begin insert into public.perso_steps (step_id, notes, dans_biblio, reperes, video)
+    values (id_step, 'copine', true, 'part sur le 1', 'https://drive.google.com/file/d/test'); ok := true; exception when others then ok := false; end;
+  comptes := comptes || text 'Copine'; noms := noms || text 'ajoute un step à sa bibliothèque (repères, vidéo)'; oks := oks || ok;
+
+  select count(*) into nb from public.perso_steps;
+  comptes := comptes || text 'Copine'; noms := noms || text 'voit seulement sa ligne privée'; oks := oks || (nb = 1);
+
+  begin update public.perso_steps set video = 'http://pas-sur.test' where step_id = id_step; ok := false; exception when others then ok := true; end;
+  comptes := comptes || text 'Copine'; noms := noms || text 'lien vidéo sans https refusé'; oks := oks || ok;
+
+  update public.perso_steps set notes = 'copine' where personne = emma; get diagnostics nb = row_count;
+  comptes := comptes || text 'Copine'; noms := noms || text 'ne modifie pas la partie privée d''Emma'; oks := oks || (nb = 0);
+
+  begin insert into public.perso_steps (personne, step_id) values (emma, id_step2); ok := false; exception when others then ok := true; end;
+  comptes := comptes || text 'Copine'; noms := noms || text 'ne peut pas écrire au nom d''Emma'; oks := oks || ok;
 
   select count(*) into nb from public.cours;
-  comptes := comptes || text 'Copine'; noms := noms || text 'ne voit aucun cours'; oks := oks || (nb = 0);
+  comptes := comptes || text 'Copine'; noms := noms || text 'voit son cours, pas ceux d''Emma'; oks := oks || (nb = 1);
+
+  begin
+    insert into public.cours (jour, notes) values (current_date, '__test__ cours copine 2') returning id into id_cours_copine;
+    insert into public.cours_steps (cours_id, step_id) values (id_cours_copine, id_step);
+    ok := true;
+  exception when others then ok := false; end;
+  comptes := comptes || text 'Copine'; noms := noms || text 'crée un cours avec un step vu'; oks := oks || ok;
+
+  begin insert into public.cours_steps (cours_id, step_id) values (id_cours, id_step2); ok := false; exception when others then ok := true; end;
+  comptes := comptes || text 'Copine'; noms := noms || text 'n''ajoute rien aux cours d''Emma'; oks := oks || ok;
 
   begin perform 1 from prive.membres; ok := false; exception when others then ok := true; end;
   comptes := comptes || text 'Copine'; noms := noms || text 'ne lit pas la liste des membres'; oks := oks || ok;
@@ -174,6 +202,12 @@ begin
   select count(*) into nb from public.mon_profil();
   comptes := comptes || text 'Sans rôle'; noms := noms || text 'n''a pas de profil'; oks := oks || (nb = 0);
 
+  select (select count(*) from public.cours) + (select count(*) from public.perso_steps) into nb;
+  comptes := comptes || text 'Sans rôle'; noms := noms || text 'ne voit aucun cours ni partie privée'; oks := oks || (nb = 0);
+
+  begin insert into public.cours (jour, notes) values (current_date, '__test__ cours inconnu'); ok := false; exception when others then ok := true; end;
+  comptes := comptes || text 'Sans rôle'; noms := noms || text 'ne peut pas créer de cours'; oks := oks || ok;
+
   reset role;
 
   -- =================== VISITEUR NON CONNECTÉ ===================
@@ -191,7 +225,7 @@ begin
   perform set_config('request.jwt.claims', '{}', true);
 
   -- ---------- Nettoyage ----------
-  delete from public.cours where id = id_cours;
+  delete from public.cours where id = id_cours or notes like '__test__%';
   delete from public.steps where nom like '__test__%';
   delete from public.lexique where id = id_lex;
   delete from public.lieux where nom like '__test__%';
