@@ -18,8 +18,9 @@ Tout le reste est dans les scripts `sql/`.
 
 - **admin** (Emma) : lit, ajoute, modifie et supprime tout.
 - **editrice** (Jade) : lit, ajoute et modifie ; ne supprime aucune fiche, mais peut retirer un lien (un membre d'un crew, par exemple).
-- **lectrice** (les copines) : lecture seule.
-- Emma et Jade ont chacune leur partie privée (niveau, « à travailler », notes, cours), invisible pour les autres.
+- **lectrice** (les copines) : lit la base commune (steps, créateurs, carte, savoir) sans la modifier.
+- **Tout le monde** a son espace privé : « Ma bibliothèque », niveau, « À travailler », Mes repères, Mes notes, Ma vidéo, onglet Cours. Chacune ne voit et ne modifie que le sien.
+- Le bouton **+** de l'onglet Steps (Emma et Jade) ajoute un step, une personne ou un crew.
 - Un compte qui n'est pas dans la liste des membres ne voit rien.
 
 ## 🗄️ Base de données : ordre des scripts (Supabase → SQL Editor)
@@ -34,7 +35,6 @@ Tout le reste est dans les scripts `sql/`.
 8. `sql/07_sous_categories.sql` : sous-catégories des steps (pour l'instant « Waistline technique » sous Female). Pour en ajouter une : une ligne de plus dans ce script, puis le relancer. Doit afficher « ok : Waistline technique (gyal) »
 9. `sql/08_instagram.sql` : compte Instagram des créateurs (le @ cliquable dans leur fiche). Doit afficher « ok : compte Instagram des créateurs »
 10. `sql/11_espace_prive.sql` : espace privé pour tout le monde, copines comprises (« Ma bibliothèque », Mes repères, Ma vidéo, onglet Cours). Chacune ne voit et n'écrit que ses lignes ; la base commune reste écrite par Emma et Jade. Doit afficher les 9 colonnes de `perso_steps` et 3 règles avec `est_membre()`. Puis relancer `04_test_securite.sql` (48 / 48).
-
 11. `sql/12_reprise_bibliotheque.sql` : **une seule fois**, après 11 et avant de publier l'appli 4a6. Un step qui avait déjà un niveau, « À travailler » ou une note entre dans « Ma bibliothèque » de sa propriétaire. Rejouable sans effet (la reprise est notée dans `prive.reprises`).
 
 ⚠️ Si on relance un jour `02_securite.sql`, il faut relancer ensuite `06`, `07`, `08` et `11`, dans l'ordre : 02 remet les droits de départ et oublie les colonnes ajoutées après.
@@ -110,6 +110,14 @@ Tous les scripts sont rejouables sans erreur.
 - 🔒 Ma vidéo : le lien est caché aux autres, mais la vidéo n'est privée que si elle n'est pas partagée « à tous ceux qui ont le lien » dans Drive.
 - Dé : combien (1, 2, 3, 5, 10), parmi Ma bibliothèque ou la Commune, Female / Male / Neutre, priorité « À travailler » (ils sortent 3 fois plus souvent). Réglages gardés sur le téléphone.
 - Les copines ont le même espace privé (bibliothèque, cours). Elles ne créent pas de step : dans un cours, seulement des steps déjà dans la base.
+
+## ➕ Bouton + et créateurs sans step (version 4a7)
+
+- Le **+** de l'onglet Steps (Emma et Jade) ouvre « Ajouter » : un step, une personne ou un crew. Le formulaire s'ouvre avec le bon type déjà choisi.
+- Dans la **Commune**, tri « Par créateur » : les créateurs et crews qui n'ont encore aucun step apparaissent aussi, à leur place dans l'ordre alphabétique, avec « Pas encore de step » (on touche pour ouvrir leur fiche).
+- Ils suivent les filtres : Female / Male selon leur étiquette (un crew mixte passe dans les deux), époques, recherche sur le nom et les autres noms.
+- Ils n'apparaissent pas en A → Z, dans Ma bibliothèque, ni avec « À travailler », Neutre ou une sous-catégorie (ces filtres portent sur des steps).
+- Le compte en haut de la liste les indique : « 21 steps · 6 sans step ».
 
 ## 🎨 Style (version 4a5)
 

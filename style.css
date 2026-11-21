@@ -340,6 +340,14 @@ body.avec-carte #contenu { padding: 0; }
 .biblio-absent { border: 1.5px dashed var(--encre); background: transparent; }
 .biblio-absent .bouton-principal { display: inline-flex; align-items: center; gap: 6px; }
 
+/* Créateurs sans step (Commune) et tiroir « Ajouter » (version 4a7) */
+.ligne.sans-step { padding: 10px 14px; }
+.ligne.sans-step .ligne-sous { font-style: italic; }
+.signe-ajout { width: 34px; height: 34px; border-radius: 17px; background: var(--sable); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+.signe-ajout.carre { border-radius: 9px; }
+.choix-ajout { min-height: 60px; }
+
 /* Tiroir qui monte du bas (dé) */
 .feuille.tiroir { background: rgba(30, 30, 28, 0.45); display: flex; flex-direction: column; justify-content: flex-end;
   padding: calc(var(--haut) + 40px) 0 0; overflow: hidden; }

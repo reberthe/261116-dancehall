@@ -293,7 +293,8 @@ function remplirFicheCreateur(c, id, retour) {
 }
 
 // ---------- Formulaire (nouveau créateur ou modification) ----------
-function ouvrirFormulaireCreateur(id) {
+// typeDepart : « personne » ou « crew » pour une nouvelle fiche ; retour : nom du bouton retour de la fiche ouverte après
+function ouvrirFormulaireCreateur(id, typeDepart = "personne", retour = "Carte") {
   const cr = id ? App.createur(id) : null;
   if (id && !cr) { message("Ce créateur n'existe plus.", true); return; }
   const dateOuverture = cr ? cr.modifie_le : null;
@@ -304,7 +305,7 @@ function ouvrirFormulaireCreateur(id) {
     const f = el("form", { class: "formulaire", novalidate: true });
     const zoneErreur = el("p", { class: "erreur", role: "alert" });
 
-    let type = cr ? cr.type : "personne";
+    let type = cr ? cr.type : typeDepart;
     let etiquette = cr ? cr.etiquette : null;
     const epoques = cr ? [...(cr.epoques || [])] : [];
 
@@ -431,7 +432,7 @@ function ouvrirFormulaireCreateur(id) {
         App.fermerFeuille();
         message("Créateur enregistré");
         App.rafraichir();
-        if (!cr) ouvrirFicheCreateur(nouvelId, "Carte");
+        if (!cr) ouvrirFicheCreateur(nouvelId, retour);
       } catch (err) {
         zoneErreur.textContent = erreurLisible(err);
         enregistrer.disabled = false;

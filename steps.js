@@ -108,8 +108,48 @@ let triSteps = lireLocal("tri_steps", "createur");   // « createur » ou « az 
 // Sous-titre d'un créateur en tête de groupe : Male · Black Roses Crew · 4 steps
 function sousTitreGroupe(c, n) {
   const crews = c.type === "personne" ? crewsDe(c.id).filter((m) => !m.ancien).map((m) => m.crew.nom).join(", ") : "";
-  return [ETIQUETTES[c.etiquette] ? ETIQUETTES[c.etiquette].nom : null, c.type === "crew" ? "Crew" : null, crews || null, pluriel(n, "step")]
+  return [ETIQUETTES[c.etiquette] ? ETIQUETTES[c.etiquette].nom : null, c.type === "crew" ? "Crew" : null, crews || null, n ? pluriel(n, "step") : null]
     .filter(Boolean).join(" · ");
+}
+
+// Créateurs et crews sans aucun step, qui passent les filtres là où ils ont un sens :
+// Female / Male selon leur étiquette (un crew mixte passe dans les deux), époques selon les leurs, recherche sur leurs noms.
+// « À travailler », Neutre seul et les sous-catégories portent sur des steps : ils les cachent.
+function createursSansStep() {
+  if (filtresSteps.aTravailler || sousCategoriesActives().length) return [];
+  const etiquettes = filtresSteps.etiquettes;
+  const mots = sansAccents(filtresSteps.recherche).split(/\s+/).filter(Boolean);
+  const avecSteps = new Set(App.donnees.steps.map((s) => s.createur_id));
+  return App.donnees.createurs.filter((c) => {
+    if (avecSteps.has(c.id)) return false;
+    if (etiquettes.length && !etiquettes.includes(c.etiquette)
+        && !(c.etiquette === "mixte" && (etiquettes.includes("gyal") || etiquettes.includes("man")))) return false;
+    if (filtresSteps.epoques.length && !(c.epoques || []).some((e) => filtresSteps.epoques.includes(e))) return false;
+    if (mots.length) {
+      const texte = sansAccents([c.nom, c.autres_noms].join(" "));
+      if (!mots.every((m) => texte.includes(m))) return false;
+    }
+    return true;
+  });
+}
+
+// ---------- Bouton + : ajouter un step, une personne ou un crew ----------
+function ouvrirAjout() {
+  const choix = (texte, sous, signe, action) => el("button", { type: "button", class: "ligne choix-ajout",
+    onclick: () => { App.fermerFeuille(); action(); } },
+    signe, el("span", { class: "ligne-texte" }, el("span", { class: "ligne-titre", text: texte }), el("span", { class: "ligne-sous", text: sous })),
+    icone(ICONES.chevron, 16, 2.4));
+  App.ouvrirTiroir((c) => c.append(
+    el("span", { class: "tiroir-poignee", "aria-hidden": "true" }),
+    el("div", { class: "tiroir-titre" }, el("h1", { text: "Ajouter" }),
+      el("button", { type: "button", class: "lien-fermer", onclick: App.fermerFeuille }, "Fermer")),
+    el("div", { class: "bloc-lignes" },
+      choix("Un step", "Un pas, avec son créateur et son époque", el("span", { class: "signe-ajout", "aria-hidden": "true" }, icone(ICONES.steps, 18, 2.2)),
+        () => ouvrirFormulaireStep(null)),
+      choix("Une personne", "Un danseur ou une danseuse", el("span", { class: "signe-ajout carre", "aria-hidden": "true" }, "P"),
+        () => ouvrirFormulaireCreateur(null, "personne", "Steps")),
+      choix("Un crew", "Un groupe de danseurs", el("span", { class: "signe-ajout", "aria-hidden": "true" }, "C"),
+        () => ouvrirFormulaireCreateur(null, "crew", "Steps")))));
 }
 
 // Une ligne de step. biblio : { ma, vus, ids } (ma = on est dans ma bibliothèque)
@@ -144,7 +184,7 @@ function dessinerSteps(contenu) {
   const biblio = { ma, vus, ids };
 
   const actions = App.peutEcrire()
-    ? [el("button", { type: "button", class: "bouton-rond", "aria-label": "Ajouter un step", onclick: () => ouvrirFormulaireStep(null) }, icone(ICONES.plus, 22, 2.6))]
+    ? [el("button", { type: "button", class: "bouton-rond", "aria-label": "Ajouter", onclick: ouvrirAjout }, icone(ICONES.plus, 22, 2.6))]
     : [];
   contenu.append(App.decor("bandes"), App.entete({ titre: "Steps", surtitre: "Riddim · Dancehall", grand: true }, ...actions));
 
@@ -200,14 +240,16 @@ function dessinerSteps(contenu) {
 
   function dessinerListe() {
     const steps = stepsFiltres(ma ? ids : null);
-    compte.textContent = steps.length + (steps.length > 1 ? " steps" : " step");
+    const sansStep = !ma && triSteps === "createur" ? createursSansStep().length : 0;
+    compte.textContent = pluriel(steps.length, "step") + (sansStep ? " · " + sansStep + " sans step" : "");
     liste.replaceChildren();
     if (ma && !ids.size) {
       liste.append(el("div", { class: "vide" },
         el("p", { text: "Ta bibliothèque est encore vide." }),
         el("p", { class: "petit", text: "Les steps notés dans tes cours y entrent tout seuls. Tu peux aussi en ajouter depuis la bibliothèque commune (« Ajouter à ma bibliothèque » dans la fiche d'un step)." })));
-    } else if (!steps.length) liste.append(el("div", { class: "vide", text: "Aucun step ne correspond." }));
-    else if (triSteps === "az") {
+    } else if (!steps.length && (ma || triSteps === "az" || !createursSansStep().length)) {
+      liste.append(el("div", { class: "vide", text: "Aucun step ne correspond." }));
+    } else if (triSteps === "az") {
       liste.append(el("div", { class: "bloc-lignes" }, steps.map((s) => ligneDeStep(s, true, biblio))));
     } else {
       // Groupes par créateur (ordre alphabétique), « Créateur inconnu » à la fin
@@ -216,6 +258,8 @@ function dessinerSteps(contenu) {
         if (!groupes.has(s.createur_id)) groupes.set(s.createur_id, []);
         groupes.get(s.createur_id).push(s);
       }
+      // Commune : aussi les créateurs et crews qui n'ont encore aucun step (s'ils passent les filtres)
+      if (!ma) for (const c of createursSansStep()) groupes.set(c.id, []);
       const ordre = [...groupes.keys()].sort((a, b) => {
         const ca = App.createur(a), cb = App.createur(b);
         if (!ca || !cb) return ca ? -1 : cb ? 1 : 0;
@@ -230,7 +274,10 @@ function dessinerSteps(contenu) {
               el("span", { class: "ligne-texte" }, el("span", { class: "groupe-nom", text: c.nom }), el("span", { class: "ligne-sous", text: sousTitreGroupe(c, ses.length) })))
           : el("div", { class: "groupe-tete" }, lettre(null),
               el("span", { class: "ligne-texte" }, el("span", { class: "groupe-nom", text: "Créateur inconnu" }), el("span", { class: "ligne-sous", text: pluriel(ses.length, "step") })));
-        liste.append(el("section", { class: "groupe" }, tete, el("div", { class: "bloc-lignes" }, ses.map((s) => ligneDeStep(s, false, biblio)))));
+        const lignes = ses.length ? ses.map((s) => ligneDeStep(s, false, biblio))
+          : [el("button", { type: "button", class: "ligne sans-step", onclick: () => ouvrirFicheCreateur(c.id, "Steps") },
+              el("span", { class: "ligne-texte" }, el("span", { class: "ligne-sous", text: "Pas encore de step" })), icone(ICONES.chevron, 16, 2.4))];
+        liste.append(el("section", { class: "groupe" + (ses.length ? "" : " groupe-vide") }, tete, el("div", { class: "bloc-lignes" }, lignes)));
       }
     }
   }
