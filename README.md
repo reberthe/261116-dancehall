@@ -80,6 +80,15 @@ Tous les scripts sont rejouables sans erreur.
 - Dans Safari : ouvrir l'adresse de l'appli → bouton Partager → « Sur l'écran d'accueil ».
 - Pour changer le nom ou l'icône d'une appli déjà installée : la supprimer de l'écran d'accueil, puis la réinstaller depuis Safari (il faudra se reconnecter).
 
+## 🤖 Installer l'appli sur Android (version 4a8)
+
+- Dans Chrome : ouvrir l'adresse de l'appli → menu ⋮ → « Ajouter à l'écran d'accueil » → « Installer ». Chrome propose parfois lui-même l'installation dans une petite barre en bas.
+- Icône Android : `icones/icone-maskable-512.png` (le vinyle un peu plus petit, pour qu'aucune forme d'icône ne le coupe).
+- **Bouton retour d'Android** (ou geste retour) : il ferme la fiche, le tiroir ou le panneau du lieu ouvert au-dessus. Rien d'ouvert : il quitte l'appli.
+- Clavier : depuis Chrome 108, Chrome sur Android réagit au clavier comme Safari sur iPhone (rien à régler).
+- Appui long sur la carte : géré par Chrome lui-même sur Android (sur iPhone, Leaflet le simule).
+- Mêmes règles que sur iPhone : copie hors connexion effacée à la déconnexion, mises à jour par le bandeau « Nouvelle version disponible ».
+
 ## 📴 Hors connexion
 
 - Tout se lit sans réseau (copie des données sur le téléphone, effacée à la déconnexion), en lecture seule.

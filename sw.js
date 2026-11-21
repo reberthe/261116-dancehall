@@ -3,7 +3,7 @@
 // Ne garde JAMAIS : les images de la carte (règle d'OpenStreetMap), la recherche de lieux, les réponses de Supabase.
 "use strict";
 
-const VERSION = "4a7";
+const VERSION = "4a8";
 const CACHE = "riddim-" + VERSION;
 
 // Fichiers de l'appli (mêmes adresses que dans index.html)
@@ -22,6 +22,7 @@ const FICHIERS = [
   "icones/icone-180.png",
   "icones/icone-192.png",
   "icones/icone-512.png",
+  "icones/icone-maskable-512.png",
 ];
 // Bibliothèques (versions figées ; demandées en « cors », comme dans index.html avec l'empreinte)
 const BIBLIOTHEQUES = [

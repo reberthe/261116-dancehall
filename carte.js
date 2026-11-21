@@ -273,8 +273,9 @@ function dessinerCarteJamaique(contenu) {
         el("button", { type: "button", class: "bouton-secondaire", onclick: () => ouvrirLieu(lieu.id) }, "Modifier ce lieu")) : null);
     panneau.hidden = false;
     panneau.scrollTop = 0;
+    App.panneauOuvert = panneau; App.verifierRetour();   // le retour d'Android le fermera
   }
-  function fermerPanneau() { panneau.hidden = true; }
+  function fermerPanneau() { panneau.hidden = true; App.verifierRetour(); }
 
   dessinerBulles();
 }

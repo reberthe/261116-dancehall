@@ -198,6 +198,7 @@ App.ouvrirFeuille = function (construire, redessinable = false) {
   document.body.style.overflow = "hidden";
   if (redessinable) feuille.redessiner = () => construire(contenu);
   construire(contenu);
+  App.verifierRetour();
   return feuille;
 };
 // Feuille qui monte du bas (dé) : toucher le fond sombre la ferme
@@ -216,7 +217,41 @@ App.fermerFeuille = function () {
   const f = App.feuilles.pop();
   if (f) f.remove();
   if (!App.feuilles.length) document.body.style.overflow = "";
+  App.verifierRetour();
 };
+
+// ---------- Bouton retour d'Android (et geste retour) ----------
+// Tant qu'une fiche, un tiroir ou le panneau d'un lieu est ouvert, l'appli garde UNE page en plus dans l'historique.
+// Le retour la consomme : on ferme alors ce qui est au-dessus, et on remet la page s'il reste quelque chose d'ouvert.
+// Rien d'ouvert : le retour quitte l'appli, comme une appli normale.
+const etatRetour = { arme: false, ignorer: false };
+App.panneauOuvert = null;   // le panneau d'un lieu (carte), s'il est affiché
+function quelqueChoseOuvert() {
+  const p = App.panneauOuvert;
+  return App.feuilles.length > 0 || (!!p && p.isConnected && !p.hidden);
+}
+App.verifierRetour = function () {
+  if (quelqueChoseOuvert() && !etatRetour.arme) {
+    history.pushState({ riddim: "fiche" }, "");
+    etatRetour.arme = true;
+  } else if (!quelqueChoseOuvert() && etatRetour.arme) {
+    // Fermé par un bouton : on retire la page en plus, un peu après (une autre fiche peut s'ouvrir juste après)
+    setTimeout(() => {
+      if (quelqueChoseOuvert() || !etatRetour.arme) return;
+      etatRetour.arme = false; etatRetour.ignorer = true;
+      history.back();
+    }, 0);
+  }
+};
+window.addEventListener("popstate", () => {
+  if (etatRetour.ignorer) { etatRetour.ignorer = false; return; }   // c'est nous qui avons reculé
+  if (!etatRetour.arme) return;
+  etatRetour.arme = false;
+  if (App.feuilles.length) App.fermerFeuille();             // remet la page s'il reste une fiche
+  else if (App.panneauOuvert) { App.panneauOuvert.hidden = true; App.panneauOuvert = null; }
+});
+// Appli rechargée avec une fiche ouverte : la page en plus ne sert plus
+if (history.state && history.state.riddim) history.replaceState(null, "");
 App.fermerToutesLesFeuilles = function () {
   while (App.feuilles.length) App.fermerFeuille();
 };
@@ -362,6 +397,7 @@ App.redessiner = function () {
   document.querySelectorAll(".bouton-hasard").forEach((b) => b.remove());
   const onglet = App.onglets[App.ongletActif];
   if (onglet) onglet.dessiner(contenu);
+  App.verifierRetour();   // ex. le panneau d'un lieu a disparu avec la carte
 };
 
 // En-tête d'un onglet : grand titre en lettres d'affiche + bouton du profil (déconnexion)
